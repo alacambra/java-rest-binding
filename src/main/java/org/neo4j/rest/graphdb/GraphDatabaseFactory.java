@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.test.ImpermanentGraphDatabase;
 
 /**
  * @author mh
@@ -45,7 +46,8 @@ public class GraphDatabaseFactory {
         }
         File file = new File( path );
         if (!file.isDirectory()) file=file.getParentFile();
-        return new EmbeddedGraphDatabase( file.getAbsolutePath() );
+        
+        return new ImpermanentGraphDatabase( file.getAbsolutePath() );
     }
 
     private static URI toURI( String uri ) {
