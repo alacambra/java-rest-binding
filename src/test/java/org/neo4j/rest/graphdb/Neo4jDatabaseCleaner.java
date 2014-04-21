@@ -78,7 +78,7 @@ public class Neo4jDatabaseCleaner {
     private Node getReferenceNodeOrNull()
     {
         try {
-            return graph.getReferenceNode();
+            return graph.getNodeById(0);
         } catch (NotFoundException e) {
             return null;
         }

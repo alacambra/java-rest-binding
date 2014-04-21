@@ -66,7 +66,7 @@ public class MatrixDataGraph {
 	 public MatrixDataGraph createNodespace() {
 	      Transaction tx = this.graphDb.beginTx();
 	      try {
-	         Node referenceNode = this.graphDb.getReferenceNode();   
+	         Node referenceNode = this.graphDb.getNodeById(0);   
 	          
 	    	 //create the index for all characters that are considered good guys (sorry cypher) 
 	    	 IndexManager index = this.graphDb.index();
@@ -178,7 +178,7 @@ public class MatrixDataGraph {
 	  * @return the Neo node
 	  */
 	 public Node getNeoNode() {
-	      return this.graphDb.getReferenceNode().getSingleRelationship(
+	      return this.graphDb.getNodeById(0).getSingleRelationship(
 	              RelTypes.NEO_NODE, Direction.OUTGOING ).getEndNode();
 	 }
       
@@ -188,7 +188,7 @@ public class MatrixDataGraph {
       * @return the Persons Collection node
       */
        public Node getPersonsCollectionNode() {
-           return this.graphDb.getReferenceNode().getSingleRelationship(
+           return this.graphDb.getNodeById(0).getSingleRelationship(
                    RelTypes.PERSONS_REFERENCE, Direction.OUTGOING ).getEndNode();
        }
         

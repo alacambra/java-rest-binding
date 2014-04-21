@@ -42,13 +42,13 @@ public class EmptyGraphTest extends RestTestBase {
     public void testGetReferenceNodeOnEmptyDbFails() {
 //        Transaction tx = getGraphDatabase().beginTx();
 //        try {
-//            getGraphDatabase().getReferenceNode().delete();
+//            getGraphDatabase().getNodeById(0).delete();
 //            tx.success();
 //        } finally
 //        {
 //            tx.finish();
 //        }
-//        getRestGraphDb().getReferenceNode();
+//        getRestGraphDb().getNodeById(0);
     }
 
     @Override

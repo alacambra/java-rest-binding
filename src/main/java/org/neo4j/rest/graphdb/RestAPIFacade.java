@@ -104,7 +104,7 @@ public class RestAPIFacade implements RestAPI {
 
     @Override
     public Node getReferenceNode() {
-        return current().getReferenceNode();
+        return current().getNodeById(0);
     }
 
     @Override

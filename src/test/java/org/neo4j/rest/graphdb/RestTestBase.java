@@ -170,7 +170,7 @@ public class RestTestBase {
     }
 
     protected Node node() {
-//        return restGraphDb.getReferenceNode();
+//        return restGraphDb.getNodeById(0);
         return GlobalGraphOperations.at(getGraphDatabase()).getAllNodes().iterator().next();
     }
 

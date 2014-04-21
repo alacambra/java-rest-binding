@@ -60,7 +60,7 @@ public class RestGremlinQueryEngineTest extends RestTestBase {
     public void testGetReferenceNode(){
         final String queryString = "g.v(0)";
         final Node result = (Node) queryEngine.query(queryString, null).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getGraphDatabase().getReferenceNode(), result);
+        assertEquals(embeddedMatrixdata.getGraphDatabase().getNodeById(0), result);
 
     }
     

@@ -196,7 +196,7 @@ public class MatrixDatabaseTest {
                                return path.endNode().getProperty("type", "none").equals("hero") ? Evaluation.INCLUDE_AND_PRUNE : Evaluation.EXCLUDE_AND_CONTINUE;
                            }
                        });
-         	 return td.traverse(mdg.getGraphDatabase().getReferenceNode());
+         	 return td.traverse(mdg.getGraphDatabase().getNodeById(0));
            }
            
            /**

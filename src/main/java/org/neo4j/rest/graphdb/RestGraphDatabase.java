@@ -21,11 +21,16 @@ package org.neo4j.rest.graphdb;
 
 
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.schema.Schema;
+import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
+import org.neo4j.graphdb.traversal.TraversalDescription;
+import org.neo4j.kernel.impl.nioneo.store.StoreId;
 import org.neo4j.rest.graphdb.index.RestIndexManager;
 import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
 import org.neo4j.rest.graphdb.util.ResultConverter;
 
 import javax.transaction.TransactionManager;
+
 import java.util.Map;
 
 
@@ -64,7 +69,7 @@ public class RestGraphDatabase extends AbstractRemoteDatabase {
     }
 
     public Node getReferenceNode() {
-        return this.restAPI.getReferenceNode();
+        return this.restAPI.getNodeById(0);
     }
 
     @Override
@@ -104,5 +109,48 @@ public class RestGraphDatabase extends AbstractRemoteDatabase {
     public void shutdown() {
         restAPI.close();
     }
+
+	@Override
+	public StoreId storeId() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Node createNode(Label... labels) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ResourceIterable<Node> findNodesByLabelAndProperty(Label label,
+			String key, Object value) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean isAvailable(long timeout) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Schema schema() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public TraversalDescription traversalDescription() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public BidirectionalTraversalDescription bidirectionalTraversalDescription() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
 

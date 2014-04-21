@@ -180,7 +180,7 @@ public class MatrixDatabaseRestTest extends RestTestBase{
                .relationships( RelTypes.HEROES_REFERENCE, Direction.OUTGOING )
                .relationships( RelTypes.HERO, Direction.OUTGOING )                       
                .filter(ScriptLanguage.JAVASCRIPT, "position.length() == 3;"); 
-          return td.traverse(this.restmdg.getGraphDatabase().getReferenceNode());
+          return td.traverse(this.restmdg.getGraphDatabase().getNodeById(0));
       }
       
       /**
@@ -207,7 +207,7 @@ public class MatrixDatabaseRestTest extends RestTestBase{
                .relationships( RelTypes.HEROES_REFERENCE, Direction.OUTGOING )
                .relationships( RelTypes.HERO, Direction.OUTGOING )                          
                .filter(ScriptLanguage.JAVASCRIPT, "position.endNode().getProperty('type','none') == 'hero';");    	
-          return td.traverse(this.restmdg.getGraphDatabase().getReferenceNode());
+          return td.traverse(this.restmdg.getGraphDatabase().getNodeById(0));
       }
       
       
@@ -226,7 +226,7 @@ public class MatrixDatabaseRestTest extends RestTestBase{
                         return path.endNode().getProperty("type", "none").equals("hero") ? Evaluation.INCLUDE_AND_PRUNE : Evaluation.EXCLUDE_AND_CONTINUE;
                     }
                 });
-    	 return td.traverse(this.embeddedmdg.getGraphDatabase().getReferenceNode());
+    	 return td.traverse(this.embeddedmdg.getGraphDatabase().getNodeById(0));
       }
 
 	

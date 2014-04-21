@@ -61,7 +61,7 @@ public class RestCypherQueryEngineTest extends RestTestBase {
     public void testGetReferenceNode(){
         final String queryString = "start n=node({reference}) return n";
         final Node result = (Node) queryEngine.query(queryString, MapUtil.map("reference",0)).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getGraphDatabase().getReferenceNode(), result);
+        assertEquals(embeddedMatrixdata.getGraphDatabase().getNodeById(0), result);
 
     }
     
