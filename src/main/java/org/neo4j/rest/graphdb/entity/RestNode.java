@@ -141,25 +141,23 @@ public class RestNode extends RestEntity implements Node {
 
 	@Override
 	public void addLabel(Label label) {
-		// TODO Auto-generated method stub
+		throw new RuntimeException("Not implemented yet");
 		
 	}
 
 	@Override
 	public void removeLabel(Label label) {
-		// TODO Auto-generated method stub
+		throw new RuntimeException("Not implemented yet");
 		
 	}
 
 	@Override
 	public boolean hasLabel(Label label) {
-		// TODO Auto-generated method stub
-		return false;
+		throw new RuntimeException("Not implemented yet");
 	}
 
 	@Override
 	public Iterable<Label> getLabels() {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("Not implemented yet");
 	}
 }
