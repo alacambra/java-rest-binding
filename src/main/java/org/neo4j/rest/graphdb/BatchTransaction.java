@@ -110,4 +110,9 @@ public class BatchTransaction implements Transaction {
         current.remove();
         current = new ThreadLocal<BatchTransaction>();
     }
+
+	@Override
+	public void close() {
+		finish();
+	}
 }
