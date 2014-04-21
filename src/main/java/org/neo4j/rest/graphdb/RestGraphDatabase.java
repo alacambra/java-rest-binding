@@ -95,10 +95,10 @@ public class RestGraphDatabase extends AbstractRemoteDatabase {
         return restAPI.getBaseUri();
     }
 
-    @Override
-    public TransactionManager getTxManager() {
-        return new BatchTransactionManager(restAPI); //new NullTransactionManager();
-    }
+//    @Override
+//    public TransactionManager getTxManager() {
+//        return new BatchTransactionManager(restAPI); //new NullTransactionManager();
+//    }
 
     @Override
     public Transaction beginTx() {
