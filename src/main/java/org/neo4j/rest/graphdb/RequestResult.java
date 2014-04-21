@@ -30,7 +30,7 @@ import javax.ws.rs.core.Response.StatusType;
 import org.neo4j.rest.graphdb.batch.RestOperations.RestOperation;
 import org.neo4j.rest.graphdb.util.JsonHelper;
 
-import com.sun.jersey.api.client.ClientResponse;
+//import com.sun.jersey.api.client.ClientResponse;
 import org.neo4j.rest.graphdb.util.StreamJsonHelper;
 
 
@@ -41,7 +41,7 @@ import org.neo4j.rest.graphdb.util.StreamJsonHelper;
 public class RequestResult {
     private final int status;
     private final String location;
-    private ClientResponse response;
+    private Response response;
     private String string;
     private Object entity;
     private InputStream stream;
@@ -56,7 +56,7 @@ public class RequestResult {
         this.stream = null;
     }
 
-    RequestResult(int status, String location, InputStream stream, ClientResponse response) {
+    RequestResult(int status, String location, InputStream stream, Response response) {
         this.status = status;
         this.location = location;
         this.response = response;
@@ -74,7 +74,7 @@ public class RequestResult {
         return new RequestResult(restOperation.getBatchId());
     }
 
-    public static RequestResult extractFrom(ClientResponse clientResponse) {
+    public static RequestResult extractFrom(Response clientResponse) {
         final int status = clientResponse.getStatus();
         final URI location = clientResponse.getLocation();
         // final InputStream data;
@@ -84,7 +84,8 @@ public class RequestResult {
             return new RequestResult(status, uriString(location), null,clientResponse);
         } else {
         //    data = clientResponse.getEntityInputStream();
-            RequestResult result = new RequestResult(status, uriString(location), clientResponse.getEntity(String.class));
+//            RequestResult result = new RequestResult(status, uriString(location), clientResponse.getEntity(String.class));
+        	RequestResult result = new RequestResult(status, uriString(location), clientResponse.readEntity(String.class));
             clientResponse.close();
             return result;
         }

@@ -21,11 +21,13 @@ package org.neo4j.rest.graphdb;
 
 import java.io.InputStream;
 import java.util.Properties;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientRequest;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.filter.ClientFilter;
+//import com.sun.jersey.api.client.Client;
+//import com.sun.jersey.api.client.ClientHandlerException;
+//import com.sun.jersey.api.client.ClientRequest;
+//import com.sun.jersey.api.client.ClientResponse;
+//import com.sun.jersey.api.client.filter.ClientFilter;
+
+import javax.ws.rs.client.Client;
 
 /**
  * @author mh
@@ -60,12 +62,12 @@ public class UserAgent {
     }
 
     public void install(Client client) {
-        client.addFilter(new ClientFilter() {
-            @Override
-            public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
-                cr.getHeaders().add("User-Agent", userAgent);
-                return getNext().handle(cr);
-            }
-        });
+//        client.addFilter(new ClientFilter() {
+//            @Override
+//            public ClientResponse handle(ClientRequest cr) throws ClientHandlerException {
+//                cr.getHeaders().add("User-Agent", userAgent);
+//                return getNext().handle(cr);
+//            }
+//        });
     }
 }

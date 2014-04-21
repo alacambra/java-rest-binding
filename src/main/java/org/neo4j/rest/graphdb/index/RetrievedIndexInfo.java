@@ -23,9 +23,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import javax.ws.rs.core.Response;
+
 import org.neo4j.rest.graphdb.RequestResult;
 
-import com.sun.jersey.api.client.ClientResponse;
 
 /**
  * @author mh
@@ -35,7 +36,7 @@ public class RetrievedIndexInfo implements IndexInfo {
     private Map<String, ?> indexInfo;
 
     public RetrievedIndexInfo(RequestResult response) {
-        if (response.statusIs(ClientResponse.Status.NO_CONTENT)) this.indexInfo = Collections.emptyMap();
+        if (response.statusIs(Response.Status.NO_CONTENT)) this.indexInfo = Collections.emptyMap();
         else this.indexInfo = (Map<String, ?>) response.toMap();
     }
 
