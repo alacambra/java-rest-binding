@@ -25,6 +25,7 @@ import java.net.URI;
 import java.util.Map;
 
 import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
@@ -137,4 +138,28 @@ public class RestNode extends RestEntity implements Node {
         }
         return false;
     }
+
+	@Override
+	public void addLabel(Label label) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void removeLabel(Label label) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean hasLabel(Label label) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Iterable<Label> getLabels() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
