@@ -23,8 +23,8 @@ import java.util.Collection;
 import java.util.Iterator;
 
 import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.index.IndexHits;
-
 import org.neo4j.rest.graphdb.RestAPI;
 import org.neo4j.rest.graphdb.UpdatableRestResult;
 import org.neo4j.rest.graphdb.converter.RestEntityExtractor;
@@ -71,7 +71,17 @@ public class SimpleIndexHits<T extends PropertyContainer> implements IndexHits<T
         return 0;
     }
 
-    public Iterator<T> iterator() {
+    
+    /*
+     * @todo validte it:
+     * Done because for some reason Iterator<T> is not accepted
+     * <code>
+     * public Iterator<T> iterator() {
+     *     return this;
+     * }
+     *</code> 
+     */
+    public ResourceIterator<T> iterator() {
         return this;
     }
 

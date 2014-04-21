@@ -27,10 +27,11 @@ import java.util.Map;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterable;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.traversal.TraversalMetadata;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.helpers.collection.IterableWrapper;
-
 import org.neo4j.rest.graphdb.RestAPI;
 
 /**
@@ -52,26 +53,29 @@ public class RestTraverser implements Traverser {
         return result;
     }
 
-    public Iterable<Node> nodes() {
-        return new IterableWrapper<Node, Path>(paths) {
-            @Override
-            protected Node underlyingObjectToObject(Path path) {
-                return path.endNode();
-            }
-        };
+    public ResourceIterable<Node> nodes() {
+    	throw new RuntimeException("not implemented yet");
+//        return new IterableWrapper<Node, Path>(paths) {
+//            @Override
+//            protected Node underlyingObjectToObject(Path path) {
+//                return path.endNode();
+//            }
+//        };
     }
 
-    public Iterable<Relationship> relationships() {
-        return new IterableWrapper<Relationship, Path>(paths) {
-            @Override
-            protected Relationship underlyingObjectToObject(Path path) {
-                return path.lastRelationship();
-            }
-        };
+    public ResourceIterable<Relationship> relationships() {
+    	throw new RuntimeException("not implemented yet");
+//        return new IterableWrapper<Relationship, Path>(paths) {
+//            @Override
+//            protected Relationship underlyingObjectToObject(Path path) {
+//                return path.lastRelationship();
+//            }
+//        };
     }
 
-    public Iterator<Path> iterator() {
-        return paths.iterator();
+    public ResourceIterator<Path> iterator() {
+    	throw new RuntimeException("not implemented yet");
+//        return paths.iterator();
     }
 
     @Override
