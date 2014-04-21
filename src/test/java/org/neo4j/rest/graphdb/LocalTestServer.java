@@ -19,17 +19,18 @@
  */
 package org.neo4j.rest.graphdb;
 
-import org.mortbay.component.LifeCycle;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
+import org.neo4j.server.database.CommunityDatabase;
 import org.neo4j.server.database.Database;
-import org.neo4j.server.database.WrappingDatabase;
+import org.neo4j.server.database.WrappedDatabase;
 import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.modules.ThirdPartyJAXRSModule;
 import org.neo4j.server.preflight.PreFlightTasks;
-import org.neo4j.server.web.Jetty6WebServer;
+import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.WebServer;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
@@ -37,10 +38,8 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -52,15 +51,19 @@ import static java.util.Arrays.asList;
  */
 public class LocalTestServer {
     private CommunityNeoServer neoServer;
+    private final int port;
+    private final String hostname;
     protected String propertiesFile = "test-db.properties";
     private final ImpermanentGraphDatabase graphDatabase;
     private String userAgent;
 
     public LocalTestServer() {
-        this("localhost");
+        this("localhost",7473);
     }
 
-    public LocalTestServer(String hostname) {
+    public LocalTestServer(String hostname, int port) {
+        this.port = port;
+        this.hostname = hostname;
         graphDatabase = new ImpermanentGraphDatabase();
     }
 
@@ -68,7 +71,7 @@ public class LocalTestServer {
         if (neoServer!=null) throw new IllegalStateException("Server already running");
         URL url = getClass().getResource("/" + propertiesFile);
         if (url==null) throw new IllegalArgumentException("Could not resolve properties file "+propertiesFile);
-        final Jetty6WebServer jettyWebServer = new Jetty6WebServer(); /* {
+        final Jetty9WebServer jettyWebServer = new Jetty9WebServer(); /* {
             @Override
             protected void startJetty() {
                 final Server jettyServer = getJetty();
@@ -105,12 +108,15 @@ public class LocalTestServer {
 
             public void destroy() { }
         },"/*");
-        String path = getPathFromUrl(url);
-        neoServer = new CommunityNeoServer(new PropertyFileConfigurator(new File(path))) {
+        neoServer = new CommunityNeoServer(new PropertyFileConfigurator(new File(url.getPath()))) {
+            @Override
+            protected int getWebServerPort() {
+                return port;
+            }
 
             @Override
             protected Database createDatabase() {
-                return new WrappingDatabase(graphDatabase);
+                return new WrappedDatabase(graphDatabase);
             }
 
             @Override
@@ -136,14 +142,6 @@ public class LocalTestServer {
         }
     }
 
-    private String getPathFromUrl(URL url) {
-        try {
-            return URLDecoder.decode(url.getPath(), "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Error decoding file path",e);
-        }
-    }
-
     public void stop() {
         try {
         neoServer.stop();
@@ -151,6 +149,14 @@ public class LocalTestServer {
             System.err.println("Error stopping server: "+e.getMessage());
         }
         neoServer=null;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String getHostname() {
+        return hostname;
     }
 
     public LocalTestServer withPropertiesFile(String propertiesFile) {
@@ -171,7 +177,7 @@ public class LocalTestServer {
     }
 
     public GraphDatabaseService getGraphDatabase() {
-        return getDatabase().graph;
+        return getDatabase().getGraph();
     }
 
     public String getUserAgent() {

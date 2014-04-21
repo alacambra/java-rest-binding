@@ -27,14 +27,13 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.graphdb.traversal.*;
-import org.neo4j.kernel.Traversal;
+import org.neo4j.graphdb.traversal.Traverser;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.rest.graphdb.MatrixDataGraph.RelTypes;
 import org.neo4j.rest.graphdb.traversal.RestTraversal;
 import org.neo4j.rest.graphdb.traversal.RestTraversalDescription.ScriptLanguage;
@@ -43,25 +42,24 @@ public class MatrixDatabaseRestTest extends RestTestBase{
 	
 	 private MatrixDataGraph embeddedmdg;
 	 private MatrixDataGraph restmdg;
-
-    public MatrixDatabaseRestTest( String url )
-    {
-        super( url );
-    }
-
-    @Before
+	
+	 @Before
      public void matrixTestSetUp() {
 		 	//fill server db with matrix nodes
 		 this.embeddedmdg = new MatrixDataGraph(getGraphDatabase()).createNodespace();
-		 this.restmdg = new MatrixDataGraph(getRestGraphDb());
+		 this.restmdg = new MatrixDataGraph(getRestGraphDb(),embeddedmdg.getReferenceNodeId());
      }
 	 
 	 @Test
 	 public void testSetMaxtrixProperty() {
-		 restmdg.getNeoNode().setProperty( "occupation", "the one" );
-	     Node node = embeddedmdg.getNeoNode();	    
-	     Assert.assertEquals( "the one", node.getProperty( "occupation" ) );
-	 }
+         restmdg.getNeoNode().setProperty( "occupation", "the one" );
+
+         try (Transaction tx = getGraphDatabase().beginTx()) {
+             Node node = embeddedmdg.getNeoNode();
+             Assert.assertEquals("the one", node.getProperty("occupation"));
+             tx.success();
+         }
+     }
 	 
 	  @Test
       public void checkForIndex() throws Exception {
@@ -125,10 +123,13 @@ public class MatrixDatabaseRestTest extends RestTestBase{
        * @throws Exception
        */
       @Test
-      public void checkTraverseByProperties() throws Exception {    	  
-          Traverser heroesTraverserRest = getHeroesViaRest();
-          Traverser heroesTraverserByProperties = getHeroesByNodeProperties();
-          assertEquals( heroesTraverserRest.nodes().iterator().next().getId(), heroesTraverserByProperties.nodes().iterator().next().getId() );
+      public void checkTraverseByProperties() throws Exception {
+          try (Transaction tx = getGraphDatabase().beginTx()) {
+              Node heroesTraverserRest = IteratorUtil.first(getHeroesViaRest().nodes());
+              Node heroesTraverserByProperties =  IteratorUtil.first(getHeroesByNodeProperties().nodes());
+              assertEquals(heroesTraverserRest.getId(), heroesTraverserByProperties.getId());
+              tx.success();
+          }
       }
       
       /**
@@ -180,7 +181,7 @@ public class MatrixDatabaseRestTest extends RestTestBase{
                .relationships( RelTypes.HEROES_REFERENCE, Direction.OUTGOING )
                .relationships( RelTypes.HERO, Direction.OUTGOING )                       
                .filter(ScriptLanguage.JAVASCRIPT, "position.length() == 3;"); 
-          return td.traverse(this.restmdg.getGraphDatabase().getReferenceNode());
+          return td.traverse(this.restmdg.getReferenceNode());
       }
       
       /**
@@ -207,7 +208,7 @@ public class MatrixDatabaseRestTest extends RestTestBase{
                .relationships( RelTypes.HEROES_REFERENCE, Direction.OUTGOING )
                .relationships( RelTypes.HERO, Direction.OUTGOING )                          
                .filter(ScriptLanguage.JAVASCRIPT, "position.endNode().getProperty('type','none') == 'hero';");    	
-          return td.traverse(this.restmdg.getGraphDatabase().getReferenceNode());
+          return td.traverse(this.restmdg.getReferenceNode());
       }
       
       
@@ -216,17 +217,20 @@ public class MatrixDatabaseRestTest extends RestTestBase{
        * @return the Traverser
        */
       private Traverser getHeroesByNodeProperties() {
-    	  TraversalDescription td = Traversal.description()          		  	
+          GraphDatabaseService db = this.embeddedmdg.getGraphDatabase();
+    	  TraversalDescription td = db.traversalDescription()
                 .breadthFirst()                        
                 .relationships( RelTypes.PERSONS_REFERENCE, Direction.OUTGOING )
                 .relationships( RelTypes.HEROES_REFERENCE, Direction.OUTGOING )
                 .relationships( RelTypes.HERO, Direction.OUTGOING )                              
                 .evaluator(new Evaluator() {
                     public Evaluation evaluate(Path path) {
-                        return path.endNode().getProperty("type", "none").equals("hero") ? Evaluation.INCLUDE_AND_PRUNE : Evaluation.EXCLUDE_AND_CONTINUE;
+                        Node node = path.endNode();
+                        Object type = node.getProperty("type", "none");
+                        return type.equals("hero") ? Evaluation.INCLUDE_AND_PRUNE : Evaluation.EXCLUDE_AND_CONTINUE;
                     }
                 });
-    	 return td.traverse(this.embeddedmdg.getGraphDatabase().getReferenceNode());
+          return td.traverse(this.embeddedmdg.getReferenceNode());
       }
 
 	

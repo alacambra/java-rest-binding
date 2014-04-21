@@ -26,29 +26,15 @@ import org.neo4j.graphdb.Transaction;
 
 public class EmptyGraphTest extends RestTestBase {
 
-    public EmptyGraphTest( String url )
-    {
-        super( url );
-    }
-
     @Test(expected = NotFoundException.class)
     public void testGetReferenceNodeOnEmptyDbFails() {
-        Transaction tx = getGraphDatabase().beginTx();
-        try {
-            getGraphDatabase().getReferenceNode().delete();
+        try (Transaction tx = getGraphDatabase().beginTx()) {
+            node().delete();
             tx.success();
-        } finally
-        {
-            tx.finish();
         }
-        getRestGraphDb().getReferenceNode();
-    }
-
-    @Override
-    @After
-    public void tearDown() throws Exception {
-        super.tearDown();
-        initServer();
-        startDb();
+        try (Transaction tx = getGraphDatabase().beginTx()) {
+            getGraphDatabase().getNodeById(node().getId());
+            tx.success();
+        }
     }
 }

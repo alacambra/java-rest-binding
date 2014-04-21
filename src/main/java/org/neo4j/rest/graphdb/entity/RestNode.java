@@ -20,23 +20,19 @@
 package org.neo4j.rest.graphdb.entity;
 
 import static java.util.Arrays.asList;
+import static org.neo4j.rest.graphdb.ExecutingRestRequest.encode;
 
 import java.net.URI;
-import java.util.Map;
+import java.util.*;
 
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.ReturnableEvaluator;
-import org.neo4j.graphdb.StopEvaluator;
-import org.neo4j.graphdb.Traverser;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.Traverser.Order;
 import org.neo4j.helpers.collection.CombiningIterable;
 import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.rest.graphdb.RestAPI;
 import org.neo4j.rest.graphdb.traversal.RestDirection;
+import org.neo4j.rest.graphdb.util.ResourceIterableWrapper;
 
 public class RestNode extends RestEntity implements Node {
     public RestNode( URI uri, RestAPI restApi ) {
@@ -48,9 +44,15 @@ public class RestNode extends RestEntity implements Node {
     }
 
     public RestNode( Map<?, ?> data, RestAPI restApi ) {
-        super( data, restApi );
-    }    
-  
+        super(data, restApi);
+    }
+
+    @Override
+    protected void doGetEntityData() {
+        super.doGetEntityData();
+        if (labels.size()>0) updateLabels();
+    }
+
     public Relationship createRelationshipTo( Node toNode, RelationshipType type ) {
     	 return this.restApi.createRelationship(this, toNode, type, null);
     }
@@ -66,7 +68,7 @@ public class RestNode extends RestEntity implements Node {
             if ( counter++ > 0 ) {
                 path += "&";
             }
-            path += type.name();
+            path += encode(type.name());
         }
         return restApi.getRelationships(this, path);
     }
@@ -80,7 +82,7 @@ public class RestNode extends RestEntity implements Node {
                                                     Direction direction ) {
         String relationshipsKey = RestDirection.from( direction ).longName + "_relationships";
         Object relationship = getStructuralData().get( relationshipsKey );
-        return restApi.getRelationships(this, relationship + "/" + type.name());
+        return restApi.getRelationships(this, relationship + "/" + encode(type.name()));
     }
 
     public Relationship getSingleRelationship( RelationshipType type,
@@ -136,5 +138,55 @@ public class RestNode extends RestEntity implements Node {
             if (hasRelationship(relationshipType,direction)) return true;
         }
         return false;
+    }
+
+    private final Set<String> labels=new HashSet<String>();
+    private long lastLabelFetchTime = 0;
+
+    @Override
+    public void addLabel(Label label) {
+        restApi.addLabels(this, label.name());
+        this.labels.add(label.name());
+    }
+
+    @Override
+    public void removeLabel(Label label) {
+        restApi.removeLabel(this,label.name());
+        this.labels.remove(label.name());
+    }
+
+    @Override
+    public boolean hasLabel(Label label) {
+        updateLabels();
+        return this.labels.contains(label.name());
+    }
+
+    private void updateLabels() {
+        if (hasToUpdateLabels()) {
+            Collection<String> labels=restApi.getNodeLabels(labelsPath());
+            this.labels.clear();
+            this.labels.addAll(labels);
+            this.lastLabelFetchTime = System.currentTimeMillis();
+        }
+    }
+
+    private boolean hasToUpdateLabels() {
+        return restApi.hasToUpdate(this.lastLabelFetchTime);
+    }
+
+    @Override
+    public ResourceIterable<Label> getLabels() {
+        updateLabels();
+        return new ResourceIterableWrapper<Label,String>(labels) {
+            @Override
+            protected Label underlyingObjectToObject(String s) {
+                return DynamicLabel.label(s);
+            }
+        };
+    }
+
+    public String labelsPath() {
+        Object path = getStructuralData().get("labels");
+        return path==null ? null : path.toString();
     }
 }

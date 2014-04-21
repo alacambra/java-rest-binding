@@ -24,14 +24,14 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.traversal.TraversalMetadata;
 import org.neo4j.graphdb.traversal.Traverser;
 import org.neo4j.helpers.collection.IterableWrapper;
 
+import org.neo4j.helpers.collection.WrappingResourceIterator;
 import org.neo4j.rest.graphdb.RestAPI;
+import org.neo4j.rest.graphdb.util.ResourceIterableWrapper;
 
 /**
  * @author Michael Hunger
@@ -52,8 +52,8 @@ public class RestTraverser implements Traverser {
         return result;
     }
 
-    public Iterable<Node> nodes() {
-        return new IterableWrapper<Node, Path>(paths) {
+    public ResourceIterable<Node> nodes() {
+        return new ResourceIterableWrapper<Node, Path>(paths) {
             @Override
             protected Node underlyingObjectToObject(Path path) {
                 return path.endNode();
@@ -61,8 +61,8 @@ public class RestTraverser implements Traverser {
         };
     }
 
-    public Iterable<Relationship> relationships() {
-        return new IterableWrapper<Relationship, Path>(paths) {
+    public ResourceIterable<Relationship> relationships() {
+        return new ResourceIterableWrapper<Relationship, Path>(paths) {
             @Override
             protected Relationship underlyingObjectToObject(Path path) {
                 return path.lastRelationship();
@@ -70,8 +70,8 @@ public class RestTraverser implements Traverser {
         };
     }
 
-    public Iterator<Path> iterator() {
-        return paths.iterator();
+    public ResourceIterator<Path> iterator() {
+        return new WrappingResourceIterator<Path>(paths.iterator());
     }
 
     @Override

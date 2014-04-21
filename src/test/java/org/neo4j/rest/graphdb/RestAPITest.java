@@ -19,19 +19,26 @@
  */
 package org.neo4j.rest.graphdb;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static java.util.Arrays.asList;
+import static org.hamcrest.CoreMatchers.hasItem;
+import static org.hamcrest.CoreMatchers.hasItems;
+import static org.junit.Assert.*;
+import static org.neo4j.graphdb.DynamicLabel.label;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexManager;
+import org.neo4j.helpers.collection.IterableWrapper;
+import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.index.impl.lucene.LuceneIndexImplementation;
 import org.neo4j.rest.graphdb.entity.RestNode;
 import org.neo4j.rest.graphdb.entity.RestRelationship;
@@ -40,18 +47,15 @@ import org.neo4j.rest.graphdb.index.RestIndexManager;
 import org.neo4j.rest.graphdb.util.TestHelper;
 
 public class RestAPITest extends RestTestBase {
-	
-	private RestAPI restAPI;
 
-    public RestAPITest( String url )
-    {
-        super( url );
-    }
+    private RestAPI restAPI;
+    public static final Label LABEL_FOO = DynamicLabel.label("FOO");
+    public static final Label LABEL_BAR = DynamicLabel.label("BAR");
 
     @Before
 	public void init(){
 		this.restAPI = ((RestGraphDatabase)getRestGraphDb()).getRestAPI();
-	}
+    }
 
     @Test
     public void testUserAgent() throws Exception {
@@ -77,16 +81,16 @@ public class RestAPITest extends RestTestBase {
 
     @Test
     public void testGetSingleRelationshipShouldReturnNullIfThereIsNone() throws Exception {
-        assertNull(getRestGraphDb().getReferenceNode().getSingleRelationship(DynamicRelationshipType.withName("foo"),Direction.OUTGOING));
+        assertNull(node().getSingleRelationship(DynamicRelationshipType.withName("foo"),Direction.OUTGOING));
     }
     @Test
     public void testHasSingleRelationshipShouldReturnFalseIfThereIsNone() throws Exception {
-        assertEquals(false,getRestGraphDb().getReferenceNode().hasRelationship(DynamicRelationshipType.withName("foo"),Direction.OUTGOING));
+        assertEquals(false,node().hasRelationship(DynamicRelationshipType.withName("foo"),Direction.OUTGOING));
     }
 
 	@Test
     public void testCreateRelationshipWithParams() {
-        Node refNode = getRestGraphDb().getReferenceNode();
+        Node refNode = node();
         Node node = getRestGraphDb().createNode();
         Map<String, Object> props = new HashMap<String, Object>();
 		props.put("name", "test");
@@ -188,7 +192,7 @@ public class RestAPITest extends RestTestBase {
 	
 	@Test
 	public void testCreateRestAPIIndexForRelationship(){
-		Node refNode = getRestGraphDb().getReferenceNode();
+		Node refNode = node();
 	    Node node = getRestGraphDb().createNode();
 	    Map<String, Object> props = new HashMap<String, Object>();
 		props.put("name", "test");
@@ -288,17 +292,6 @@ public class RestAPITest extends RestTestBase {
 	}
 
     @Test
-    @Ignore("Returned Location header too large for Jetty buffer")
-    public void testCreateUniqueNodeWithLargeStringValue() throws Exception {
-        final RestIndex<Node> index = restAPI.createIndex(Node.class, "unique-node", LuceneIndexImplementation.EXACT_CONFIG);
-        char[] data = new char[5000];
-        Arrays.fill(data,'a');
-        String largeString = String.valueOf(data);
-        final RestNode node1 = restAPI.getOrCreateNode(index, "uid", largeString, map("uid",largeString));
-        assertEquals(largeString,node1.getProperty("uid"));
-    }
-
-    @Test
     public void testCreateNodeUniquely() {
         final RestIndex<Node> index = restAPI.createIndex(Node.class, "unique-node", LuceneIndexImplementation.EXACT_CONFIG);
         final RestNode node1 = restAPI.getOrCreateNode(index, "uid", "42", map("name", "Michael"));
@@ -324,5 +317,84 @@ public class RestAPITest extends RestTestBase {
         assertEquals("Neo4j",rel2.getProperty("at"));
         final RestRelationship rel3 = restAPI.getOrCreateRelationship(index, "uid", "41", michael, david, "KNOWS", map("at", "Neo4j"));
         assertEquals(false, rel3.equals(rel1));
+    }
+
+    @Test
+    public void testGetNodeLabel() {
+        RestNode node = restAPI.createNode(map());
+        node.addLabel(LABEL_FOO);
+        int count=0;
+        for (Label label1 : node.getLabels()) {
+            assertEquals(LABEL_FOO.name(),label1.name());
+            count++;
+        }
+        assertEquals("one label",1,count);
+    }
+    @Test
+    public void testRemoveNodeLabel() {
+        RestNode node = restAPI.createNode(map());
+        node.addLabel(LABEL_FOO);
+        node.removeLabel(LABEL_FOO);
+        assertFalse(node.getLabels().iterator().hasNext());
+    }
+
+    @Test
+    public void testGetNodeByLabel() throws Exception {
+        RestNode node = restAPI.createNode(map());
+        node.addLabel(LABEL_FOO);
+        int count=0;
+        for (RestNode restNode : restAPI.getNodesByLabel(LABEL_FOO.name())) {
+            assertEquals(node,restNode);
+            count++;
+        }
+        assertEquals("one node with label",1,count);
+    }
+
+    @Test
+    public void testSetNodeLabel() throws Exception {
+        RestNode n1 = restAPI.createNode(map("name", "node1"));
+        n1.addLabel(LABEL_FOO);
+        n1.addLabel(LABEL_BAR);
+        Collection<String> labels = IteratorUtil.asCollection(new IterableWrapper<String, Label>(n1.getLabels()) {
+            protected String underlyingObjectToObject(Label label) {
+                return label.name();
+            }
+        });
+        assertThat(labels, hasItems(LABEL_FOO.name(), LABEL_BAR.name()));
+    }
+
+    @Test
+    public void testRemoveNodeLabel2() throws Exception {
+        RestNode n1 = restAPI.createNode(map("name", "node1"));
+        n1.addLabel(LABEL_FOO);
+        n1.addLabel(LABEL_BAR);
+
+        n1.removeLabel(LABEL_BAR);
+        Collection<String> labels = IteratorUtil.asCollection(new IterableWrapper<String, Label>(n1.getLabels()) {
+            protected String underlyingObjectToObject(Label label) {
+                return label.name();
+            }
+        });
+        assertThat(labels, hasItems(LABEL_FOO.name()));
+    }
+
+    @Test
+    public void testGetNodeByLabelAndProperty() throws Exception {
+        RestNode node = restAPI.createNode(map("name","foo bar"));
+        node.addLabel(LABEL_FOO);
+        int count=0;
+        for (RestNode restNode : restAPI.getNodesByLabelAndProperty(LABEL_FOO.name(),"name","foo bar")) {
+            assertEquals(node,restNode);
+            count++;
+        }
+        assertEquals("one node with label",1,count);
+    }
+
+    @Test
+    public void testGetAllLabelNames() throws Exception {
+        RestNode node = restAPI.createNode(map("name","foo bar"));
+        node.addLabel(LABEL_FOO);
+        node.addLabel(LABEL_BAR);
+        assertThat(restAPI.getAllLabelNames(), hasItems(LABEL_FOO.name(),LABEL_BAR.name()));
     }
 }

@@ -30,35 +30,30 @@ import org.neo4j.rest.graphdb.util.TestHelper;
 
 public class RestEntityTest extends RestTestBase  {
 
-    public RestEntityTest( String url )
-    {
-        super( url );
-    }
-
     @Test
     public void testSetProperty() {
-        getRestGraphDb().getReferenceNode().setProperty( "name", "test" );
-        Node node = getRestGraphDb().getReferenceNode();
+        node().setProperty( "name", "test" );
+        Node node = node();
         Assert.assertEquals( "test", node.getProperty( "name" ) );
     }
 
     @Test
     public void testSetStringArrayProperty() {
-        getRestGraphDb().getReferenceNode().setProperty( "name", new String[]{"test"} );
-        Node node = getRestGraphDb().getReferenceNode();
+        node().setProperty( "name", new String[]{"test"} );
+        Node node = node();
         Assert.assertArrayEquals( new String[]{"test"}, (String[])node.getProperty( "name" ) );
     }
     @Test
     public void testSetDoubleArrayProperty() {
         double[] data = {0, 1, 2};
-        getRestGraphDb().getReferenceNode().setProperty( "data", data );
-        Node node = getRestGraphDb().getReferenceNode();
+        node().setProperty( "data", data );
+        Node node = node();
         Assert.assertTrue("same double array",Arrays.equals( data, (double[])node.getProperty( "data" ) ));
     }
 
     @Test
     public void testRemoveProperty() {
-        Node node = getRestGraphDb().getReferenceNode();
+        Node node = node();
         node.setProperty( "name", "test" );
         Assert.assertEquals( "test", node.getProperty( "name" ) );
         node.removeProperty( "name" );
@@ -68,7 +63,7 @@ public class RestEntityTest extends RestTestBase  {
 
     @Test
     public void testSetPropertyOnRelationship() {
-        Node refNode = getRestGraphDb().getReferenceNode();
+        Node refNode = node();
         Node node = getRestGraphDb().createNode();
         Relationship rel = refNode.createRelationshipTo( node, Type.TEST );
         rel.setProperty( "name", "test" );
@@ -79,7 +74,7 @@ public class RestEntityTest extends RestTestBase  {
 
     @Test
     public void testRemovePropertyOnRelationship() {
-        Node refNode = getRestGraphDb().getReferenceNode();
+        Node refNode = node();
         Node node = getRestGraphDb().createNode();
         Relationship rel = refNode.createRelationshipTo( node, Type.TEST );
         rel.setProperty( "name", "test" );

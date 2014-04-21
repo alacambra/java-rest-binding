@@ -31,6 +31,11 @@ public class NullTransaction implements Transaction {
 
     }
 
+    @Override
+    public void close() {
+
+    }
+
     public void failure() {
     }
 

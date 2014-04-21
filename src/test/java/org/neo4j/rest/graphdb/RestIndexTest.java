@@ -35,17 +35,13 @@ import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.graphdb.index.RelationshipIndex;
 import org.neo4j.index.lucene.QueryContext;
+
 import static org.junit.Assert.assertEquals;
 
 public class RestIndexTest extends RestTestBase {
 
     private static final String NODE_INDEX_NAME = "NODE_INDEX";
     private static final String REL_INDEX_NAME = "REL_INDEX";
-
-    public RestIndexTest( String url )
-    {
-        super( url );
-    }
 
     @Test
     public void testAddToNodeIndex() {

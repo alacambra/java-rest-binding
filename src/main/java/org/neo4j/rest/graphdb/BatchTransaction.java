@@ -62,19 +62,24 @@ public class BatchTransaction implements Transaction {
 
     @Override
     public void finish() {
+        close();
+    }
+
+    @Override
+    public void close() {
         depth--;
         if (depth > 0) return; // unroll stack
         if (depth < 0) throw new IllegalStateException("transaction already finished");
         try {
-        if (success!=null && success) {
-            final BatchTransaction currentTx = current.get();
-            if (currentTx!=null) {
-                current.remove();
-                currentTx.batchRestAPI.executeBatchRequest();
-            } else {
-                throw new IllegalStateException("Not in Transaction/BatchOperation");
+            if (success!=null && success) {
+                final BatchTransaction currentTx = current.get();
+                if (currentTx!=null) {
+                    current.remove();
+                    currentTx.batchRestAPI.executeBatchRequest();
+                } else {
+                    throw new IllegalStateException("Not in Transaction/BatchOperation");
+                }
             }
-        }
         } finally {
             current.remove();
         }

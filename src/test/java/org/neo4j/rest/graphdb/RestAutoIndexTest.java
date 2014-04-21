@@ -19,7 +19,6 @@
  */
 package org.neo4j.rest.graphdb;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.DynamicRelationshipType;
@@ -33,26 +32,6 @@ import java.net.URISyntaxException;
 import static org.junit.Assert.*;
 
 public class RestAutoIndexTest extends RestTestBase {
-
-    public RestAutoIndexTest( String url )
-    {
-        super( url );
-    }
-
-    @After
-    public void resetAutoIndexing() {
-        reset( getRestGraphDb().index().getNodeAutoIndexer() );
-        reset( getRestGraphDb().index().getRelationshipAutoIndexer());
-
-    }
-
-    private void reset( AutoIndexer<? extends PropertyContainer> autoIndexer )
-    {
-        autoIndexer.setEnabled( false );
-        for (String property: autoIndexer.getAutoIndexedProperties()) {
-            autoIndexer.stopAutoIndexingProperty( property );
-        }
-    }
 
     @Test
     public void testEnableDisableAutoIndexerNode() {
@@ -161,7 +140,7 @@ public class RestAutoIndexTest extends RestTestBase {
     }
 
     @Before
-    public void setUp() throws URISyntaxException {
+    public void setUp() throws Exception {
         super.setUp();
         getGraphDatabase().index().getNodeAutoIndexer().setEnabled(false);
         getGraphDatabase().index().getRelationshipAutoIndexer().setEnabled(false);

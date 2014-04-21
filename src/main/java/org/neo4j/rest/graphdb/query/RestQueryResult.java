@@ -20,6 +20,8 @@
 package org.neo4j.rest.graphdb.query;
 
 import org.neo4j.rest.graphdb.RestAPI;
+import org.neo4j.rest.graphdb.UpdatableRestResult;
+import org.neo4j.rest.graphdb.batch.CypherResult;
 import org.neo4j.rest.graphdb.converter.RestEntityExtractor;
 import org.neo4j.rest.graphdb.converter.RestTableResultExtractor;
 import org.neo4j.rest.graphdb.util.*;
@@ -32,32 +34,51 @@ import java.util.Map;
  * @author mh
  * @since 03.05.12
  */
-public class RestQueryResult implements QueryResult<Map<String, Object>> {
-    private final QueryResultBuilder<Map<String, Object>> result;
+public class RestQueryResult implements QueryResult<Map<String, Object>>, UpdatableRestResult<CypherResult> {
+    private QueryResultBuilder<Map<String, Object>> result;
+    private ResultConverter resultConverter;
 
     @Override
     public <R> ConvertedResult<R> to(Class<R> type) {
+        checkResult();
         return result.to(type);
     }
 
     @Override
     public <R> ConvertedResult<R> to(Class<R> type, ResultConverter<Map<String, Object>, R> converter) {
+        checkResult();
         return result.to(type, converter);
     }
 
     @Override
     public void handle(Handler<Map<String, Object>> handler) {
+        checkResult();
         result.handle(handler);
     }
 
     @Override
     public Iterator<Map<String, Object>> iterator() {
+        checkResult();
         return result.iterator();
     }
 
-    public RestQueryResult(Map<?, ?> result, RestAPI restApi, ResultConverter resultConverter) {
+    private void checkResult() {
+        if (result==null) throw new IllegalStateException("Result not yet available, please finish the transaction first.");
+    }
+
+    public RestQueryResult(CypherResult responseData, RestAPI restApi, ResultConverter resultConverter) {
+        this.resultConverter = resultConverter;
+        if (!responseData.isBatchResult()) this.result = toQueryResult(responseData, restApi, resultConverter);
+    }
+
+    private QueryResultBuilder<Map<String, Object>> toQueryResult(CypherResult responseData, RestAPI restApi, ResultConverter resultConverter) {
         final RestTableResultExtractor extractor = new RestTableResultExtractor(new RestEntityExtractor(restApi));
-        final List<Map<String, Object>> data = extractor.extract(result);
-        this.result = new QueryResultBuilder<Map<String, Object>>(data, resultConverter);
+        final List<Map<String, Object>> data = extractor.extract(responseData.asMap());
+        return new QueryResultBuilder<Map<String, Object>>(data, resultConverter);
+    }
+
+    @Override
+    public void updateFrom(CypherResult newValue, RestAPI restApi) {
+        this.result = toQueryResult(newValue,restApi,resultConverter);
     }
 }

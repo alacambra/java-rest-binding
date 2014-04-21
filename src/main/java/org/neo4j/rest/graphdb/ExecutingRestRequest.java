@@ -34,30 +34,19 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 
 
-
-
 import javax.ws.rs.core.Response;
 
-
-
-
-//import com.sun.jersey.api.client.filter.LoggingFilter; 
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.rest.graphdb.util.Config;
 import org.neo4j.rest.graphdb.util.JsonHelper;
 
-//import com.sun.jersey.api.client.Client;
-//import com.sun.jersey.api.client.ClientResponse;
-//import com.sun.jersey.api.client.WebResource;
-//import com.sun.jersey.api.client.WebResource.Builder;
-//import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
-
-
-
-
-
-
-
+import javax.ws.rs.core.MediaType;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.util.Map;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 
@@ -81,23 +70,6 @@ public class ExecutingRestRequest implements RestRequest {
 
 	}
 
-	protected void addAuthFilter(String username, String password) {
-		if (username == null) return;
-		//        client.addFilter( new HTTPBasicAuthFilter( username, password ) );
-	}
-
-	protected Client createClient() {
-		Client client = ClientBuilder.newClient();
-		//        client.setConnectTimeout(Config.getConnectTimeout());
-		//        client.setReadTimeout(Config.getReadTimeout());
-		//        client.setChunkedEncodingSize(8*1024);
-		userAgent.install(client);
-		if (Config.useLoggingFilter()) {
-			//            client.addFilter(new LoggingFilter());
-		}
-		return client;
-	}
-
 	private ExecutingRestRequest( String uri, Client client ) {
 		this.baseUri = uriWithoutSlash( uri );
 		this.client = client;
@@ -116,6 +88,22 @@ public class ExecutingRestRequest implements RestRequest {
 		}
 	}
 
+	protected void addAuthFilter(String username, String password) {
+		if (username == null) return;
+		//        client.addFilter( new HTTPBasicAuthFilter( username, password ) );
+	}
+
+	protected Client createClient() {
+		Client client = ClientBuilder.newClient();
+		//        client.setConnectTimeout(Config.getConnectTimeout());
+		//        client.setReadTimeout(Config.getReadTimeout());
+		//        client.setChunkedEncodingSize(8*1024);
+		userAgent.install(client);
+		if (Config.useLoggingFilter()) {
+			//            client.addFilter(new LoggingFilter());
+		}
+		return client;
+	}
 
 	private Builder builder( String path ) {
 
@@ -124,17 +112,14 @@ public class ExecutingRestRequest implements RestRequest {
 		if (Config.streamingIsEnabled()){
 			return target.request().accept(STREAMING_JSON_TYPE).header("X-Stream","true");
 		} 
-		
+
 		return target.request().accept(APPLICATION_JSON_TYPE);
 	}
 
 	private String pathOrAbsolute( String path ) {
-		if (pattern.matcher(path).matches()) {
-			return path;
-		}
+		if ( path.startsWith( "http://" ) ) return path;
 		return baseUri + "/" + path;
 	}
-
 
 	@Override
 	public RequestResult get( String path ) {
@@ -145,13 +130,13 @@ public class ExecutingRestRequest implements RestRequest {
 	@Override
 	public RequestResult get( String path, Object data ) {
 		Builder builder = builder(path);
-		
+
 		/*
 		 * œtodo: whz a get method couls need an entity?
 		 */
 		if ( data != null ) {
 			throw new RuntimeException("a getter call has no entity body");
-//			builder = builder.entity( JsonHelper.createJsonFrom( data ), APPLICATION_JSON_TYPE );
+			//			builder = builder.entity( JsonHelper.createJsonFrom( data ), APPLICATION_JSON_TYPE );
 		}
 		return RequestResult.extractFrom(builder.get(Response.class));
 	}
@@ -172,7 +157,7 @@ public class ExecutingRestRequest implements RestRequest {
 		} else {
 			return RequestResult.extractFrom(builder.post(null, Response.class));
 		}
-		
+
 	}
 
 	@Override
@@ -188,15 +173,14 @@ public class ExecutingRestRequest implements RestRequest {
 	public RestRequest with( String uri ) {
 		return new ExecutingRestRequest(uri, client);
 	}
-
+	
 	private URI uri( String uri ) {
-		try {
-			return new URI( uri );
-		} catch ( URISyntaxException e ) {
-			throw new RuntimeException( e );
-		}
-	}
-
+        try {
+            return new URI( uri );
+        } catch ( URISyntaxException e ) {
+            throw new RuntimeException( e );
+        }
+    }
 
 	@Override
 	public String getUri() {
@@ -210,5 +194,8 @@ public class ExecutingRestRequest implements RestRequest {
 
 	public void close() {
 		client.close();
+	}
+	
+	public static void shutdown() {
 	}
 }

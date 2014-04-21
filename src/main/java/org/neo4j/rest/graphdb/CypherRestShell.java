@@ -19,6 +19,8 @@
  */
 package org.neo4j.rest.graphdb;
 
+import org.neo4j.rest.graphdb.batch.CypherResult;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -36,10 +38,10 @@ public class CypherRestShell {
         System.out.print("Query: ");
         while ((query=reader.readLine())!=null && !query.isEmpty()) {
             long time=System.currentTimeMillis();
-            Map<?,?> result = restAPIFacade.query(query, null);
+            CypherResult result = restAPIFacade.query(query, null);
             time=System.currentTimeMillis()-time;
-            System.out.println(result.get("columns"));
-            List<List<Object>> rows = (List<List<Object>>) result.get("data");
+            System.out.println(result.getColumns());
+            List<List<Object>> rows = (List<List<Object>>) result.getData();
             for (List<Object> row : rows) {
                 System.out.println(row);
             }

@@ -24,6 +24,7 @@ import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 import org.neo4j.rest.graphdb.batch.BatchCallback;
 import org.neo4j.rest.graphdb.batch.BatchRestAPI;
+import org.neo4j.rest.graphdb.batch.CypherResult;
 import org.neo4j.rest.graphdb.converter.RestEntityExtractor;
 import org.neo4j.rest.graphdb.entity.RestEntity;
 import org.neo4j.rest.graphdb.entity.RestNode;
@@ -38,6 +39,7 @@ import org.neo4j.rest.graphdb.util.Config;
 import org.neo4j.rest.graphdb.util.QueryResult;
 import org.neo4j.rest.graphdb.util.ResultConverter;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -188,7 +190,7 @@ public class RestAPIFacade implements RestAPI {
     }
 
     @Override
-    public Map<?, ?> query(String statement, Map<String, Object> params) {
+    public CypherResult query(String statement, Map<String, Object> params) {
         return current().query(statement, params);
     }
 
@@ -309,7 +311,37 @@ public class RestAPIFacade implements RestAPI {
             transaction.success();
             return batchResult;
         } finally {
-            transaction.finish();
+            transaction.close();
         }
+    }
+
+    @Override
+    public void addLabels(RestNode node, String...labels) {
+        current().addLabels(node, labels);
+    }
+
+    @Override
+    public void removeLabel(RestNode node, String label) {
+        current().removeLabel(node,label);
+    }
+
+    @Override
+    public Collection<String> getNodeLabels(String path) {
+        return current().getNodeLabels(path);
+    }
+
+    @Override
+    public Collection<String> getAllLabelNames() {
+        return current().getAllLabelNames();
+    }
+
+    @Override
+    public Iterable<RestNode> getNodesByLabel(String label) {
+        return current().getNodesByLabel(label);
+    }
+
+    @Override
+    public Iterable<RestNode> getNodesByLabelAndProperty(String label, String property, Object value) {
+        return current().getNodesByLabelAndProperty(label,property,value);
     }
 }

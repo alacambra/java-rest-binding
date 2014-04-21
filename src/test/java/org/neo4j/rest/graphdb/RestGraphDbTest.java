@@ -19,34 +19,26 @@
  */
 package org.neo4j.rest.graphdb;
 
+import java.util.Collection;
 import java.util.Date;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.rest.graphdb.util.TestHelper;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.matchers.JUnitMatchers.hasItems;
 
 public class RestGraphDbTest extends RestTestBase {
 
-    public RestGraphDbTest( String url )
-    {
-        super( url );
-    }
-
     @Test
     public void testGetRefNode() {
-        Node refNode = getRestGraphDb().getReferenceNode();
-        Node nodeById = getRestGraphDb().getNodeById( 0 );
+        Node refNode = node();
+        Node nodeById = getRestGraphDb().getNodeById( refNode.getId() );
         Assert.assertEquals( refNode, nodeById );
     }
 
@@ -58,7 +50,7 @@ public class RestGraphDbTest extends RestTestBase {
 
     @Test
     public void testCreateRelationship() {
-        Node refNode = getRestGraphDb().getReferenceNode();
+        Node refNode = node();
         Node node = getRestGraphDb().createNode();
         Relationship rel = refNode.createRelationshipTo( node, Type.TEST );
         Relationship foundRelationship = TestHelper.firstRelationshipBetween( refNode.getRelationships( Type.TEST, Direction.OUTGOING ), refNode, node );
@@ -73,7 +65,7 @@ public class RestGraphDbTest extends RestTestBase {
     @Test
     public void testBasic() {
         final GraphDatabaseService gdb = getRestGraphDb();
-        Node refNode = gdb.getReferenceNode();
+        Node refNode = node();
         Node node = gdb.createNode();
         final RelationshipType TEST = DynamicRelationshipType.withName("TEST");
         Relationship rel = refNode.createRelationshipTo( node,
@@ -92,4 +84,35 @@ public class RestGraphDbTest extends RestTestBase {
         assertEquals(TEST.name(), IteratorUtil.single(gdb.getRelationshipTypes()).name());
     }
 
+    @Test
+    public void testCreateNodeWithLabels() {
+        Label label1 = DynamicLabel.label("FOO");
+        Label label2 = DynamicLabel.label("BAR");
+        Node node = getRestGraphDb().createNode(label1, label2);
+        Collection<Label> labels = IteratorUtil.asCollection(node.getLabels());
+        assertEquals(2,labels.size());
+        for (Label label : labels) {
+            assertTrue(label.name().equals(label1.name()) || label.name().equals(label2.name()));
+        }
+    }
+
+    @Test
+    public void testGetNodesByLabelAndProperty() throws Exception {
+        Label label1 = DynamicLabel.label("FOO");
+        Label label2 = DynamicLabel.label("BAR");
+        GraphDatabaseService db = getRestGraphDb();
+        Node node = db.createNode(label1, label2);
+        node.setProperty("name","foo bar");
+        node.setProperty("age",42);
+        Collection<Node> nodes = IteratorUtil.asCollection(db.findNodesByLabelAndProperty(label1, "name", "foo bar"));
+        assertEquals(1,nodes.size());
+        assertEquals(node,nodes.iterator().next());
+
+        nodes = IteratorUtil.asCollection(db.findNodesByLabelAndProperty(label2, "age", 42));
+        assertEquals(1,nodes.size());
+        assertEquals(node,nodes.iterator().next());
+
+        nodes = IteratorUtil.asCollection(db.findNodesByLabelAndProperty(label2, "age", 43));
+        assertEquals(0,nodes.size());
+    }
 }

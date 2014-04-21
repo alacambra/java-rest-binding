@@ -65,11 +65,11 @@ public abstract class RestIndex<T extends PropertyContainer> implements Index<T>
 
 
     public String indexPath( ) {
-        return "index/" + getTypeName() + "/" + indexName;
+        return "index/" + getTypeName() + "/" + encode(indexName);
     }
 
     public String indexPath( String key, Object value ) {
-        return "index/" + getTypeName() + "/" + indexName + (key!=null? "/" + encode(key) :"") + (value!=null ? "/" + encode(value):"");
+        return "index/" + getTypeName() + "/" + encode(indexName) + (key!=null? "/" + encode(key) :"") + (value!=null ? "/" + encode(value):"");
     }
     private String queryPath( String key, Object value ) {
         return indexPath(key,null) + "?query="+ encode(value);

@@ -19,23 +19,20 @@
  */
 package org.neo4j.rest.graphdb;
 
-import static java.util.Arrays.*;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.helpers.collection.IteratorUtil;
 import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.rest.graphdb.entity.RestNode;
 import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
-import org.neo4j.rest.graphdb.util.QueryResult;
 
 
 public class RestCypherQueryEngineTest extends RestTestBase {
@@ -43,16 +40,11 @@ public class RestCypherQueryEngineTest extends RestTestBase {
     private RestAPI restAPI;
     private MatrixDataGraph embeddedMatrixdata;
     private MatrixDataGraph restMatrixData;
-
-    public RestCypherQueryEngineTest( String url )
-    {
-        super( url );
-    }
-
+    
     @Before
     public void init() throws Exception {
-        embeddedMatrixdata = new MatrixDataGraph(getGraphDatabase()).createNodespace();
-        restMatrixData = new MatrixDataGraph(getRestGraphDb());
+        embeddedMatrixdata = new MatrixDataGraph(getGraphDatabase(),nodeId()).createNodespace();
+        restMatrixData = new MatrixDataGraph(getRestGraphDb(),nodeId());
         this.restAPI = ((RestGraphDatabase)getRestGraphDb()).getRestAPI();
         queryEngine = new RestCypherQueryEngine(restAPI);      
     }
@@ -60,8 +52,13 @@ public class RestCypherQueryEngineTest extends RestTestBase {
     @Test
     public void testGetReferenceNode(){
         final String queryString = "start n=node({reference}) return n";
-        final Node result = (Node) queryEngine.query(queryString, MapUtil.map("reference",0)).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getGraphDatabase().getReferenceNode(), result);
+        final Node result = (Node) queryEngine.query(queryString, MapUtil.map("reference",node().getId())).to(Node.class).single();
+        Transaction tx = getGraphDatabase().beginTx();
+        try {
+            assertEquals(embeddedMatrixdata.getReferenceNode(), result);
+        } finally {
+            tx.success();tx.close();
+        }
 
     }
     
@@ -69,23 +66,41 @@ public class RestCypherQueryEngineTest extends RestTestBase {
     public void testGetNeoNode(){        
         final String queryString = "start neo=node({neoname}) return neo";
         final Node result = (Node) queryEngine.query(queryString, MapUtil.map("neoname",getNeoId())).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getNeoNode(), result);
+        assertNeoNodeEquals( result);
     }
-    
+
+    private void assertNodeEquals(Node node, Node result) {
+        Transaction tx = getGraphDatabase().beginTx();
+        try {
+            assertEquals(node, result);
+        } finally {
+            tx.success();tx.close();
+        }
+    }
+
     @Test
     public void testGetNeoNodeByIndexLookup(){
         final String queryString = "start neo=node:heroes(name={neoname}) return neo";
         final Node result = (Node) queryEngine.query(queryString, MapUtil.map("neoname","Neo")).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getNeoNode(), result);
+        assertNeoNodeEquals(result);
     }
 
-    @Ignore
     @Test
     public void testGetNeoNodeByIndexQuery(){        
         final String queryString = "start neo=node:heroes({neoquery}) return neo";
         final Node result = (Node) queryEngine.query(queryString, MapUtil.map("neoquery","name:Neo")).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getNeoNode(), result);
+        assertNeoNodeEquals(result);
     }
+
+    private void assertNeoNodeEquals(Node result) {
+        Transaction tx = getGraphDatabase().beginTx();
+        try {
+            assertEquals(embeddedMatrixdata.getNeoNode(), result);
+        } finally {
+            tx.success();tx.close();
+        }
+    }
+
     @Test
     public void testGetNeoNodeSingleProperty(){       
         final String queryString = "start n=node({neo}) return n.name";
@@ -97,33 +112,26 @@ public class RestCypherQueryEngineTest extends RestTestBase {
     public void testGetNeoNodeViaMorpheus(){
         final String queryString = "start morpheus=node:heroes(name={morpheusname}) match (morpheus) <-[:KNOWS]- (neo) return neo";
         final Node result = (Node) queryEngine.query(queryString, MapUtil.map("morpheusname","Morpheus")).to(Node.class).single();
-        assertEquals(embeddedMatrixdata.getNeoNode(), result);
+        assertNeoNodeEquals(result);
     }
-    
+
+    @Test
+    public void testCollectConverter(){
+        final String queryString = "start neo=node:heroes(name={neoname}) match (neo) -- (other) return neo, collect(other) as o";
+        final Map result = (Map) queryEngine.query(queryString, MapUtil.map("neoname","Neo")).to(Map.class).single();
+        assertNeoNodeEquals((Node) result.get("neo"));
+        Collection<Node> others = (Collection<Node>) result.get("o");
+        assertEquals(5,others.size());
+        for (Node other : others) {
+            assertTrue(other.getId() >= 0);
+        }
+    }
+
     @Test
     public void testGetCypherNodeViaMorpheusAndFilter(){
         final String queryString = "start morpheus=node:heroes(name={morpheusname}) match (morpheus) -[:KNOWS]-> (person) where person.type = \"villain\" return person";
         final Node result = (Node) queryEngine.query(queryString, MapUtil.map("morpheusname","Morpheus")).to(Node.class).single();
         assertEquals("Cypher", result.getProperty("name"));
-    }
-
-    @Test
-    public void testCollectClauseReturnsCollectionOfNodes(){
-        final String queryString = "start morpheus=node:heroes(name={morpheusname}) match (morpheus) -[:KNOWS]-> (person) return collect(person) as known_people";
-        final QueryResult qr= queryEngine.query(queryString, MapUtil.map("morpheusname", "Morpheus"));
-        final Collection<Map<String,Object>> result = IteratorUtil.asCollection(qr);
-
-        assertEquals(1, result.size());
-        Map<String,Object> firstEntry = result.iterator().next();
-        List nodes = (List)firstEntry.get("known_people");
-
-        for (Object anEntity: nodes) {
-            assertEquals(RestNode.class, anEntity.getClass());
-            Node aFriend = (Node)anEntity;
-            assertTrue(aFriend.getProperty("name").equals("Trinity") ||
-                       aFriend.getProperty("name").equals("Cypher"));
-        }
-
     }
     
     @Test
@@ -139,18 +147,24 @@ public class RestCypherQueryEngineTest extends RestTestBase {
         final String queryString = "start neo=node({neoId}) return neo.name, neo.type, neo.age";
         final Collection<Map<String,Object>> result = IteratorUtil.asCollection(queryEngine.query(queryString, MapUtil.map("neoId",getNeoId())));
         assertEquals(asList( MapUtil.map("neo.name", "Thomas Anderson", "neo.type","hero", "neo.age", 29 )),result); 
+        
     }
     
     @Test
     public void testGetRelationshipType(){
         final String queryString ="start n=node({reference}) match (n)-[r]->() return type(r)";
-        final Collection<String> result =  IteratorUtil.asCollection(queryEngine.query(queryString, MapUtil.map("reference",0)).to(String.class)); 
+        final Collection<String> result =  IteratorUtil.asCollection(queryEngine.query(queryString, MapUtil.map("reference",node().getId())).to(String.class));
         assertTrue(result.contains("NEO_NODE"));      
     }
     
     
     public long getNeoId(){
-        return  embeddedMatrixdata.getNeoNode().getId();
-    }    
+        Transaction tx = getGraphDatabase().beginTx();
+        try {
+            return  embeddedMatrixdata.getNeoNode().getId();
+        } finally {
+            tx.success();tx.close();
+        }
+    }
    
 }

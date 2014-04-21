@@ -20,44 +20,33 @@
 package org.neo4j.rest.graphdb;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.neo4j.helpers.collection.MapUtil.map;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.index.Index;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.index.IndexManager;
 import org.neo4j.helpers.collection.IteratorUtil;
-import org.neo4j.index.impl.lucene.LuceneIndexImplementation;
 import org.neo4j.rest.graphdb.batch.BatchCallback;
 import org.neo4j.rest.graphdb.entity.RestNode;
 import org.neo4j.rest.graphdb.entity.RestRelationship;
-import org.neo4j.rest.graphdb.index.RestIndex;
-import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
 import org.neo4j.rest.graphdb.util.TestHelper;
 
 public class BatchRestAPITest extends RestTestBase {
     public static final DynamicRelationshipType RELATIONSHIP_TYPE = DynamicRelationshipType.withName("foo");
     private RestAPI restAPI;
-
-    public BatchRestAPITest( String url )
-    {
-        super( url );
-    }
-
+  
     // TODO transaction check, exception handling if an exception happened in the server
 
     @Before
     public void init(){
         this.restAPI = ((RestGraphDatabase)getRestGraphDb()).getRestAPI();
     }
-
+    
     @Test
     public void testCreateNode(){
         TestBatchResult response =this.restAPI.executeBatch(new BatchCallback<TestBatchResult>() {
@@ -69,9 +58,14 @@ public class BatchRestAPITest extends RestTestBase {
                 result.n2 = batchRestApi.createNode(map("name", "node2"));
                 return result;
             }
-        });       
-        assertEquals("node1", response.n1.getProperty("name"));      
-        assertEquals("node2", response.n2.getProperty("name"));
+        });
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertEquals("node1", response.n1.getProperty("name"));
+            assertEquals("node2", response.n2.getProperty("name"));
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
 
     @Test
@@ -86,31 +80,16 @@ public class BatchRestAPITest extends RestTestBase {
                 }
                 return result;
             }
-        });       
-        assertEquals("node0", response.n1.getProperty("name"));      
-        assertEquals("node1000", response.n2.getProperty("name"));
-    }
-
-
-    @Test
-    public void testCreateNodeUniquely() {
-        final RestIndex<Node> index = restAPI.createIndex(Node.class, "unique-node", LuceneIndexImplementation.EXACT_CONFIG);
-        TestBatchResult response = this.restAPI.executeBatch(new BatchCallback<TestBatchResult>() {
-            @Override
-            public TestBatchResult recordBatch(RestAPI batchRestApi) {
-                TestBatchResult result=new TestBatchResult();
-                result.n1 = restAPI.getOrCreateNode(index, "uid", "42", map("name", "Michael"));
-                result.n2 = restAPI.getOrCreateNode(index, "uid", "42", map("name", "Michael2"));
-                return result;
-            }
         });
-        assertEquals(response.n1,response.n2);
-        assertEquals("Michael",response.n1.getProperty("name"));
-        assertEquals("Michael",response.n2.getProperty("name"));
-//        final RestNode node3 = restAPI.getOrCreateNode(index, "uid", "41", map("name", "Emil"));
-//        assertEquals(false, node1.equals(node3));
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertEquals("node0", response.n1.getProperty("name"));
+            assertEquals("node1000", response.n2.getProperty("name"));
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
-
+   
     @Test
     public void testRestApiWorksRegardlessOfSource() {
         RestAPI leaked =this.restAPI.executeBatch(new BatchCallback<RestAPI>() {
@@ -120,7 +99,12 @@ public class BatchRestAPITest extends RestTestBase {
             }
         });
         leaked.createNode(map());
-        assertEquals(2,countExistingNodes());
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertEquals(2, countExistingNodes());
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
 
 
@@ -137,10 +121,15 @@ public class BatchRestAPITest extends RestTestBase {
             }
 
         });
-        assertNotNull(relationship);
-        assertEquals(RELATIONSHIP_TYPE.name(),relationship.getType().name());
-        assertEquals(node1,relationship.getStartNode());
-        assertEquals("node2", relationship.getEndNode().getProperty("name"));
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertNotNull(relationship);
+            assertEquals(RELATIONSHIP_TYPE.name(),relationship.getType().name());
+            assertEquals(node1,relationship.getStartNode());
+            assertEquals("node2", relationship.getEndNode().getProperty("name"));
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
 
     @Test(expected = IllegalStateException.class)
@@ -154,20 +143,6 @@ public class BatchRestAPITest extends RestTestBase {
 
         });
 
-    }
-    public void testExecuteCypherInBatch() throws Exception {
-        TestBatchResult result = restAPI.executeBatch(new BatchCallback<TestBatchResult>() {
-            @Override
-            public TestBatchResult recordBatch(RestAPI batchRestApi) {
-                RestCypherQueryEngine engine = new RestCypherQueryEngine(batchRestApi);
-                TestBatchResult result = new TestBatchResult();
-                result.n1=engine.query("create (n {name:{name}}) return n", map("name", "Foo")).to(Node.class).singleOrNull();
-                result.n2=engine.query("start n=node(*) where has(n.name) and n.name={name} return n", map("name", "Foo")).to(Node.class).singleOrNull();
-                return result;
-            }
-        });
-        assertEquals("Foo",result.n1.getProperty("name"));
-        assertEquals(result.n1.getId(),result.n2.getId());
     }
 
     @Test
@@ -191,7 +166,12 @@ public class BatchRestAPITest extends RestTestBase {
             }
 
         });
-        assertEquals(3, deleted.intValue());
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertEquals(3, deleted.intValue());
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
     @Test
     public void testCreateRelationshipBetweenNodesOutsideofBatch() throws Exception {
@@ -206,10 +186,15 @@ public class BatchRestAPITest extends RestTestBase {
             }
 
         });
-        assertNotNull(relationship);
-        assertEquals(RELATIONSHIP_TYPE.name(), relationship.getType().name());
-        assertEquals(node1, relationship.getStartNode());
-        assertEquals(node2,relationship.getEndNode());
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertNotNull(relationship);
+            assertEquals(RELATIONSHIP_TYPE.name(), relationship.getType().name());
+            assertEquals(node1, relationship.getStartNode());
+            assertEquals(node2, relationship.getEndNode());
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
 
     @Test
@@ -225,14 +210,18 @@ public class BatchRestAPITest extends RestTestBase {
                 
                 return result;
             }
-        });  
-       
-        assertEquals("node1", response.n1.getProperty("name"));
-        assertEquals("true", response.n1.getProperty("test"));
-        assertEquals("stilltrue",response.n1.getProperty("test2"));
-        assertEquals("true", loadRealNode(response.n1).getProperty("test"));
-        assertEquals("stilltrue", loadRealNode(response.n1).getProperty("test2"));
-       
+        });
+
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertEquals("node1", response.n1.getProperty("name"));
+            assertEquals("true", response.n1.getProperty("test"));
+            assertEquals("stilltrue",response.n1.getProperty("test2"));
+            assertEquals("true", loadRealNode(response.n1).getProperty("test"));
+            assertEquals("stilltrue", loadRealNode(response.n1).getProperty("test2"));
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
     
     @Test  (expected = org.neo4j.graphdb.NotFoundException.class)
@@ -247,9 +236,13 @@ public class BatchRestAPITest extends RestTestBase {
                 result.n2 = batchRestApi.createNode(map("name", "node2"));                
                 return result;
             }
-        });         
-       loadRealNode(response.n1);
-      
+        });
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            loadRealNode(response.n1);
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
     
     @Test  
@@ -266,10 +259,14 @@ public class BatchRestAPITest extends RestTestBase {
                 
                 return result;
             }
-        });         
-        Relationship foundRelationship = TestHelper.firstRelationshipBetween( r.n1.getRelationships(Type.TEST, Direction.OUTGOING), r.n1, r.n2);
-        Assert.assertNull("found relationship", foundRelationship);
-      
+        });
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            Relationship foundRelationship = TestHelper.firstRelationshipBetween( r.n1.getRelationships(Type.TEST, Direction.OUTGOING), r.n1, r.n2);
+            Assert.assertNull("found relationship", foundRelationship);
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
 
     @Test
@@ -291,18 +288,23 @@ public class BatchRestAPITest extends RestTestBase {
         assertEquals("same relationship", r.rel, foundRelationship);
         assertEquals("rel", r.rel.getProperty("name"));
 
-        assertThat(r.n1.getRelationships(Type.TEST, Direction.OUTGOING), new IsRelationshipToNodeMatcher(r.n1, r.n2));
-        assertThat(r.n1.getRelationships(Direction.OUTGOING), new IsRelationshipToNodeMatcher(r.n1, r.n2));
-        assertThat(r.n1.getRelationships(Direction.BOTH), new IsRelationshipToNodeMatcher(r.n1, r.n2));
-        assertThat(r.n1.getRelationships(Type.TEST), new IsRelationshipToNodeMatcher(r.n1, r.n2));
-        assertThat(r.allRelationships, new IsRelationshipToNodeMatcher(r.n1, r.n2));
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertThat(r.n1.getRelationships(Type.TEST, Direction.OUTGOING), new IsRelationshipToNodeMatcher(r.n1, r.n2));
+            assertThat(r.n1.getRelationships(Direction.OUTGOING), new IsRelationshipToNodeMatcher(r.n1, r.n2));
+            assertThat(r.n1.getRelationships(Direction.BOTH), new IsRelationshipToNodeMatcher(r.n1, r.n2));
+            assertThat(r.n1.getRelationships(Type.TEST), new IsRelationshipToNodeMatcher(r.n1, r.n2));
+            assertThat(r.allRelationships, new IsRelationshipToNodeMatcher(r.n1, r.n2));
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
 
     @Test
     public void testAddToIndex() {
         final MatrixDataGraph matrixDataGraph = new MatrixDataGraph(getGraphDatabase());
         matrixDataGraph.createNodespace();
-        final RestNode neoNode = restAPI.getNodeById(matrixDataGraph.getNeoNode().getId());
+        final RestNode neoNode = restAPI.getNodeById(matrixDataGraph.getNeoNodeId());
         final IndexHits<Node> heroes = restAPI.executeBatch(new BatchCallback<IndexHits<Node>>() {
             @Override
             public IndexHits<Node> recordBatch(RestAPI batchRestApi) {
@@ -310,11 +312,20 @@ public class BatchRestAPITest extends RestTestBase {
                 Node n1 = batchRestApi.createNode(map("name", "Apoc"));
                 final Index<Node> index = batchRestApi.index().forNodes("heroes");
                 index.add(n1, "indexname", "Apoc");
-                final Node indexResult = getGraphDatabase().index().forNodes("heroes").get("indexname", "Neo2").getSingle();
-                assertNull(indexResult);
+
+                Transaction transaction = getGraphDatabase().beginTx();
+                try {
+                    final Node indexResult = getGraphDatabase().index().forNodes("heroes").get("indexname", "Neo2").getSingle();
+                    assertNull(indexResult);
+                } finally {
+                    transaction.success();transaction.close();
+                }
+
                 return index.query("indexname:Apoc");
             }
         });
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
         assertEquals("1 hero",1,heroes.size());        
         IndexManager index = getGraphDatabase().index();             
         Index<Node> goodGuys = index.forNodes("heroes");
@@ -322,6 +333,10 @@ public class BatchRestAPITest extends RestTestBase {
         Node apoc = hits.getSingle();
         
         assertEquals("Apoc indexed",apoc,heroes.iterator().next());
+
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
     
     @Test
@@ -335,8 +350,13 @@ public class BatchRestAPITest extends RestTestBase {
                 return index.query("name:Neo");
             }
         });
-        assertEquals("1 hero", 1, heroes.size());
-        assertEquals("Neo indexed", matrixDataGraph.getNeoNode(), heroes.iterator().next());
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            assertEquals("1 hero", 1, heroes.size());
+            assertEquals("Neo indexed", matrixDataGraph.getNeoNode(), heroes.iterator().next());
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
     
     @Test
@@ -351,8 +371,13 @@ public class BatchRestAPITest extends RestTestBase {
                 return null;
             }
         });
-            IndexManager index = matrixDataGraph.getGraphDatabase().index();          
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            IndexManager index = matrixDataGraph.getGraphDatabase().index();
             Assert.assertFalse(index.existsForNodes("heroes"));
+        } finally {
+            transaction.success();transaction.close();
+        }
     }
     
     

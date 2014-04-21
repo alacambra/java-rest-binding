@@ -29,7 +29,6 @@ import org.neo4j.kernel.TransactionBuilder;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.impl.core.KernelPanicEventGenerator;
 import org.neo4j.kernel.impl.core.NodeManager;
-import org.neo4j.kernel.impl.core.RelationshipTypeHolder;
 import org.neo4j.kernel.impl.nioneo.store.StoreId;
 import org.neo4j.kernel.impl.persistence.PersistenceSource;
 import org.neo4j.kernel.impl.transaction.LockManager;
@@ -64,93 +63,11 @@ abstract class AbstractRemoteDatabase implements GraphDatabaseAPI {
     }
 
     @Override
-    public Guard getGuard() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public KernelPanicEventGenerator getKernelPanicGenerator() {
-        throw new UnsupportedOperationException();
-    }
-
-    public <T> Collection<T> getManagementBeans(Class<T> type) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public PersistenceSource getPersistenceSource() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public TransactionBuilder tx() {
-        throw new UnsupportedOperationException();
-    }
-
-    public <T> T getSingleManagementBean(Class<T> type) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public KernelData getKernelData() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IdGeneratorFactory getIdGeneratorFactory() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public RelationshipTypeHolder getRelationshipTypeHolder() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public StringLogger getMessageLog() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DiagnosticsManager getDiagnosticsManager() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TransactionManager getTxManager() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public XaDataSourceManager getXaDataSourceManager() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public LockManager getLockManager() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public NodeManager getNodeManager() {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void shutdown() {
-    }
-
-    public StoreId getStoreId() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TxIdGenerator getTxIdGenerator() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public DependencyResolver getDependencyResolver() {
-        throw new UnsupportedOperationException();
     }
 }

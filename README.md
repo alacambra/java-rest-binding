@@ -13,7 +13,7 @@ The behavior of "transactions" changed in 1.8, in 1.7 they were no-op, i.e. just
 
 In 1.8 it tries to collect all operations within a tx as a batch-operation which will then be executed on the server.
 
-This has the implication that the results retrieved within that "tx" are not immediately available but only after you called tx.success and tx.finish
+This has the implication that the results retrieved within that "tx" are not immediately available but only after you called tx.success and tx.close
 
 
 
@@ -37,8 +37,15 @@ Build it locally. Then use the maven / ivy dependency or copy the jar into your 
     <dependency>
 		<groupId>org.neo4j</groupId>
 		<artifactId>neo4j-rest-graphdb</artifactId>
-		<version>1.8.M07</version>
+		<version>2.0.0</version>
     </dependency>
+    
+    and in the repositories section add:
+    
+    <repository>
+       <id>neo4j-contrib-releases</id>
+       <url>https://raw.github.com/neo4j-contrib/m2/master/releases</url>
+    </repository>
 
     GraphDatabaseService gds = new RestGraphDatabase("http://localhost:7474/db/data");
     GraphDatabaseService gds = new RestGraphDatabase("http://localhost:7474/db/data",username,password);

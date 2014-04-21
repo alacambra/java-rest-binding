@@ -38,7 +38,23 @@ import org.neo4j.helpers.collection.MapUtil;
  * @since 03.08.11
  */
 public class MatrixDataGraph {
-	 /** specify relationship types*/
+
+    private Node referenceNode;
+
+    long getNeoNodeId() {
+        Transaction transaction = getGraphDatabase().beginTx();
+        try {
+            return getNeoNode().getId();
+        } finally {
+            transaction.success();transaction.close();
+        }
+    }
+
+    public long getReferenceNodeId() {
+        return referenceNode.getId();
+    }
+
+    /** specify relationship types*/
 	 public enum RelTypes implements RelationshipType{
 	     NEO_NODE,
 	     KNOWS,
@@ -56,99 +72,112 @@ public class MatrixDataGraph {
 	 public MatrixDataGraph(GraphDatabaseService graphDb){
 		 this.graphDb = graphDb;		
 	 }
-		
-	 
-	 /**
+
+     public MatrixDataGraph(GraphDatabaseService graphDb, long referenceNode) {
+         this.graphDb = graphDb;
+         this.referenceNode = getNodeById(graphDb, referenceNode);
+     }
+
+    private Node getNodeById(GraphDatabaseService graphDb, long id) {
+        try (Transaction tx = graphDb.beginTx()) {
+            Node node = graphDb.getNodeById(id);
+            tx.success();
+            return node;
+        }
+    }
+
+    /**
 	  * fills the database with nodes and relationships, using the matrix example
-	  * @param graphDb the graph database to fill 
 	  * @return MatrixDataGraph the instance for chaining purposes
 	  */
 	 public MatrixDataGraph createNodespace() {
-	      Transaction tx = this.graphDb.beginTx();
-	      try {
-	         Node referenceNode = this.graphDb.getReferenceNode();   
-	          
-	    	 //create the index for all characters that are considered good guys (sorry cypher) 
-	    	 IndexManager index = this.graphDb.index();
-	    	 Index<Node> goodGuys = index.forNodes("heroes");
-	    	//create persons collection node
-	    	 Node persons = this.graphDb.createNode();
-	    	 persons.setProperty("type", "Persons Collection");	    	 
-	    	 //create heroes collection node
-	    	 Node heroes = this.graphDb.createNode();
-	    	 heroes.setProperty("type", "Heroes Collection");
-	    	//create villains collection node
-	    	 Node villains = this.graphDb.createNode();
-	    	 villains.setProperty("type", "Villains Collection");
-	    	 // create neo node
-	         Node neo = this.graphDb.createNode();
-	         addMultiplePropertiesToNode(neo, MapUtil.map("age",29, "name","Thomas Anderson", "type", "hero"));	 	         
-	      
-	         
-	         // connect the persons collection node to the reference node
-	         referenceNode.createRelationshipTo( persons, RelTypes.PERSONS_REFERENCE);
-	         // connect the heroes collection node to the persons collection node
-	         persons.createRelationshipTo( heroes, RelTypes.HEROES_REFERENCE);
-	         // connect the villains collection node to the persons collection node
-	         persons.createRelationshipTo( villains, RelTypes.VILLAINS_REFERENCE);
-	         // connect neo to the reference node
-	         referenceNode.createRelationshipTo( neo, RelTypes.NEO_NODE );
-	         // connect neo to the heroes collection node
-	         heroes.createRelationshipTo( neo, RelTypes.HERO);
-	         
-	         
-	         // create trinity node
-	         Node trinity = this.graphDb.createNode();
-	         addMultiplePropertiesToNode(trinity, MapUtil.map("name","Trinity", "type", "hero"));
-	         createRelationshipWithProperties(neo, trinity, RelTypes.KNOWS,  MapUtil.map( "age", "3 days"));	        
-	         
-	         // connect trinity to the heroes collection node
-	         heroes.createRelationshipTo( trinity, RelTypes.HERO);
-	         
-	         // create morpheus node
-	         Node morpheus = this.graphDb.createNode();
-	         addMultiplePropertiesToNode(morpheus, MapUtil.map( "name","Morpheus", "occupation","Total badass", "rank","Captain", "type","hero"));	        
-	         neo.createRelationshipTo( morpheus, RelTypes.KNOWS );
-	         
-	         createRelationshipWithProperties(morpheus, trinity, RelTypes.KNOWS,  MapUtil.map( "age", "12 years"));	        
-	         // connect morpheus to the heroes collection node
-	         heroes.createRelationshipTo( morpheus, RelTypes.HERO);
-	         
-	         //add all good guys to the index
-	         addMultipleNodesToIndex(goodGuys, "name", MapUtil.map("Neo",neo, "Trinity", trinity, "Morpheus", morpheus));
-	         
-	         // create cypher node
-	         Node cypher = this.graphDb.createNode();
-	         addMultiplePropertiesToNode(cypher, MapUtil.map("last name","Reagan", "name","Cypher", "type","villain" ));	        
-	         trinity.createRelationshipTo( cypher, RelTypes.KNOWS );	         
-	         createRelationshipWithProperties(morpheus, cypher, RelTypes.KNOWS,  MapUtil.map( "disclosure", "public"));          
-	         // connect cypher to the villains collection node
-	         villains.createRelationshipTo( cypher, RelTypes.VILLAIN);
-	         
-	         // create smith node
-	         Node smith = this.graphDb.createNode();
-	         addMultiplePropertiesToNode(smith, MapUtil.map("language","C++", "name","Agent Smith", "version","1.0b", "type","villain"));	        
-	         neo.createRelationshipTo( smith, RelTypes.FIGHTS );
-	         createRelationshipWithProperties(cypher, smith, RelTypes.KNOWS,  MapUtil.map( "age", "6 months", "disclosure", "secret"));  
-	       	 
-	         // connect smith to the villains collection node
-	         villains.createRelationshipTo( smith, RelTypes.VILLAIN);
-	         
-	         // create architect node
-	         Node architect = this.graphDb.createNode();
-	         architect.setProperty( "name", "The Architect" );
-	         smith.createRelationshipTo( architect, RelTypes.CODED_BY );
-	 	     
-	         tx.success();
-	     }  finally {
-	         tx.finish();
-	        
-	     }
+         try (Transaction tx = this.graphDb.beginTx()) {
+             if (this.referenceNode == null) {
+                 referenceNode = this.graphDb.createNode();
+             }
+
+             //create the index for all characters that are considered good guys (sorry cypher)
+             IndexManager index = this.graphDb.index();
+             Index<Node> goodGuys = index.forNodes("heroes");
+             //create persons collection node
+             Node persons = this.graphDb.createNode();
+             persons.setProperty("type", "Persons Collection");
+             //create heroes collection node
+             Node heroes = this.graphDb.createNode();
+             heroes.setProperty("type", "Heroes Collection");
+             //create villains collection node
+             Node villains = this.graphDb.createNode();
+             villains.setProperty("type", "Villains Collection");
+             // create neo node
+             Node neo = this.graphDb.createNode();
+             addMultiplePropertiesToNode(neo, MapUtil.map("age", 29, "name", "Thomas Anderson", "type", "hero"));
+
+
+             // connect the persons collection node to the reference node
+             referenceNode.createRelationshipTo(persons, RelTypes.PERSONS_REFERENCE);
+             // connect the heroes collection node to the persons collection node
+             persons.createRelationshipTo(heroes, RelTypes.HEROES_REFERENCE);
+             // connect the villains collection node to the persons collection node
+             persons.createRelationshipTo(villains, RelTypes.VILLAINS_REFERENCE);
+             // connect neo to the reference node
+             referenceNode.createRelationshipTo(neo, RelTypes.NEO_NODE);
+             // connect neo to the heroes collection node
+             heroes.createRelationshipTo(neo, RelTypes.HERO);
+
+
+             // create trinity node
+             Node trinity = this.graphDb.createNode();
+             addMultiplePropertiesToNode(trinity, MapUtil.map("name", "Trinity", "type", "hero"));
+             createRelationshipWithProperties(neo, trinity, RelTypes.KNOWS, MapUtil.map("age", "3 days"));
+
+             // connect trinity to the heroes collection node
+             heroes.createRelationshipTo(trinity, RelTypes.HERO);
+
+             // create morpheus node
+             Node morpheus = this.graphDb.createNode();
+             addMultiplePropertiesToNode(morpheus, MapUtil.map("name", "Morpheus", "occupation", "Total badass", "rank", "Captain", "type", "hero"));
+             neo.createRelationshipTo(morpheus, RelTypes.KNOWS);
+
+             createRelationshipWithProperties(morpheus, trinity, RelTypes.KNOWS, MapUtil.map("age", "12 years"));
+             // connect morpheus to the heroes collection node
+             heroes.createRelationshipTo(morpheus, RelTypes.HERO);
+
+             //add all good guys to the index
+             addMultipleNodesToIndex(goodGuys, "name", MapUtil.map("Neo", neo, "Trinity", trinity, "Morpheus", morpheus));
+
+             // create cypher node
+             Node cypher = this.graphDb.createNode();
+             addMultiplePropertiesToNode(cypher, MapUtil.map("last name", "Reagan", "name", "Cypher", "type", "villain"));
+             trinity.createRelationshipTo(cypher, RelTypes.KNOWS);
+             createRelationshipWithProperties(morpheus, cypher, RelTypes.KNOWS, MapUtil.map("disclosure", "public"));
+             // connect cypher to the villains collection node
+             villains.createRelationshipTo(cypher, RelTypes.VILLAIN);
+
+             // create smith node
+             Node smith = this.graphDb.createNode();
+             addMultiplePropertiesToNode(smith, MapUtil.map("language", "C++", "name", "Agent Smith", "version", "1.0b", "type", "villain"));
+             neo.createRelationshipTo(smith, RelTypes.FIGHTS);
+             createRelationshipWithProperties(cypher, smith, RelTypes.KNOWS, MapUtil.map("age", "6 months", "disclosure", "secret"));
+
+             // connect smith to the villains collection node
+             villains.createRelationshipTo(smith, RelTypes.VILLAIN);
+
+             // create architect node
+             Node architect = this.graphDb.createNode();
+             architect.setProperty("name", "The Architect");
+             smith.createRelationshipTo(architect, RelTypes.CODED_BY);
+
+             tx.success();
+         }
 	      return this;
 	 }
-	 
-	 
-	public void addMultiplePropertiesToNode(Node node, Map<String,Object> props){
+
+
+    public Node getReferenceNode() {
+        return referenceNode;
+    }
+
+    public void addMultiplePropertiesToNode(Node node, Map<String,Object> props){
 	   for (Map.Entry<String, Object> entry : props.entrySet()){
 	       node.setProperty(entry.getKey(), entry.getValue());
 	   }
@@ -178,8 +207,12 @@ public class MatrixDataGraph {
 	  * @return the Neo node
 	  */
 	 public Node getNeoNode() {
-	      return this.graphDb.getReferenceNode().getSingleRelationship(
-	              RelTypes.NEO_NODE, Direction.OUTGOING ).getEndNode();
+        try (Transaction tx = graphDb.beginTx()) {
+            Node neoNode = this.referenceNode.getSingleRelationship(
+                    RelTypes.NEO_NODE, Direction.OUTGOING).getEndNode();
+            tx.success();
+            return neoNode;
+        }
 	 }
       
      /**
@@ -188,8 +221,12 @@ public class MatrixDataGraph {
       * @return the Persons Collection node
       */
        public Node getPersonsCollectionNode() {
-           return this.graphDb.getReferenceNode().getSingleRelationship(
-                   RelTypes.PERSONS_REFERENCE, Direction.OUTGOING ).getEndNode();
+           try (Transaction tx = graphDb.beginTx()) {
+               Node personsCollection = this.referenceNode.getSingleRelationship(
+                       RelTypes.PERSONS_REFERENCE, Direction.OUTGOING).getEndNode();
+               tx.success();
+               return personsCollection;
+           }
        }
         
       /**
@@ -198,8 +235,12 @@ public class MatrixDataGraph {
        * @return the Heroes Collection node
        */
       public Node getHeroesCollectionNode() {
-            return this.getPersonsCollectionNode().getSingleRelationship(
-                   RelTypes.HEROES_REFERENCE, Direction.OUTGOING ).getEndNode();
+          try (Transaction tx = graphDb.beginTx()) {
+              Node heroesCollection = this.getPersonsCollectionNode().getSingleRelationship(
+                      RelTypes.HEROES_REFERENCE, Direction.OUTGOING).getEndNode();
+              tx.success();
+              return heroesCollection;
+          }
       }
       
       /**
@@ -208,8 +249,12 @@ public class MatrixDataGraph {
        * @return the Villains Collection node
        */
       public Node getVillainsCollectionNode() {
-            return this.getPersonsCollectionNode().getSingleRelationship(
-                   RelTypes.VILLAINS_REFERENCE, Direction.OUTGOING ).getEndNode();
+          try (Transaction tx = graphDb.beginTx()) {
+              Node villainsCollection = this.getPersonsCollectionNode().getSingleRelationship(
+                      RelTypes.VILLAINS_REFERENCE, Direction.OUTGOING).getEndNode();
+              tx.success();
+              return villainsCollection;
+          }
       }
 
 }

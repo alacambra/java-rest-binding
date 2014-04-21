@@ -43,7 +43,7 @@ public class BatchTransactionManager implements TransactionManager,Transaction {
         final BatchTransaction current = BatchTransaction.current();
         if (current==null) throw new IllegalStateException("Not in transaction");
         current.success();
-        current.finish();
+        current.close();
     }
 
     @Override
@@ -83,7 +83,7 @@ public class BatchTransactionManager implements TransactionManager,Transaction {
         final BatchTransaction current = BatchTransaction.current();
         if (current==null) throw new IllegalStateException("Not in transaction");
         current.failure();
-        current.finish();
+        current.close();
     }
 
     @Override

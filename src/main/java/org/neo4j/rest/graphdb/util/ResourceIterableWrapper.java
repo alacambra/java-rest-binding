@@ -17,14 +17,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.rest.graphdb;
+package org.neo4j.rest.graphdb.util;
 
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterable;
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.helpers.collection.IterableWrapper;
 
-/**
- * @author mh
- * @since 24.01.11
- */
-enum Type implements RelationshipType {
-    TEST
+import java.util.Iterator;
+
+public abstract class ResourceIterableWrapper<T,U> extends IterableWrapper<T,U> implements ResourceIterable<T> {
+    public ResourceIterableWrapper(Iterable<U> iterableToWrap) {
+        super(iterableToWrap);
+    }
+
+    public ResourceIterator<T> iterator() {
+        final Iterator<T> it = super.iterator();
+        return new ResourceIterator<T>() {
+            public void close() { }
+
+            public boolean hasNext() { return it.hasNext(); }
+
+            public T next() { return it.next(); }
+
+            public void remove() { }
+        };
+    }
 }

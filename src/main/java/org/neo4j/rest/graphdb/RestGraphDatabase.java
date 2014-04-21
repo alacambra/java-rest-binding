@@ -21,11 +21,19 @@ package org.neo4j.rest.graphdb;
 
 
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.schema.Schema;
+import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
+import org.neo4j.kernel.impl.nioneo.store.StoreId;
+import org.neo4j.rest.graphdb.entity.RestNode;
 import org.neo4j.rest.graphdb.index.RestIndexManager;
 import org.neo4j.rest.graphdb.query.RestCypherQueryEngine;
+import org.neo4j.rest.graphdb.traversal.RestTraversal;
+import org.neo4j.rest.graphdb.traversal.RestTraversalDescription;
+import org.neo4j.rest.graphdb.util.ResourceIterableWrapper;
 import org.neo4j.rest.graphdb.util.ResultConverter;
 
 import javax.transaction.TransactionManager;
+import java.util.Collection;
 import java.util.Map;
 
 
@@ -63,7 +71,7 @@ public class RestGraphDatabase extends AbstractRemoteDatabase {
     	return this.restAPI.getNodeById(id);
     }
 
-    public Node getReferenceNode() {
+    public Node getReferenceNode(boolean create) {
         return this.restAPI.getReferenceNode();
     }
 
@@ -91,8 +99,28 @@ public class RestGraphDatabase extends AbstractRemoteDatabase {
     }
 
     @Override
+    public StoreId storeId() {
+        return null;
+    }
+
+    @Override
+    public boolean isAvailable(long timeout) {
+        return restAPI!=null;
+    }
+
     public TransactionManager getTxManager() {
         return new BatchTransactionManager(restAPI); //new NullTransactionManager();
+    }
+
+    @Override
+    public DependencyResolver getDependencyResolver() {
+        return new DependencyResolver.Adapter() {
+            @Override
+            public <T> T resolveDependency(Class<T> type, SelectionStrategy selector) throws IllegalArgumentException {
+                if (TransactionManager.class.isAssignableFrom(type)) return (T)getTxManager();
+                return null;
+            }
+        };
     }
 
     @Override
@@ -103,6 +131,44 @@ public class RestGraphDatabase extends AbstractRemoteDatabase {
     @Override
     public void shutdown() {
         restAPI.close();
+    }
+
+    @Override
+    public Node createNode(Label... labels) {
+        RestNode node = restAPI.createNode(null);
+        String[] labelNames = new String[labels.length];
+        for (int i = 0; i < labels.length; i++) labelNames[i]=labels[i].name();
+        restAPI.addLabels(node,labelNames);
+        return node;
+    }
+
+    @Override
+    public ResourceIterable<Node> findNodesByLabelAndProperty(Label label, String property, Object value) {
+        Iterable<RestNode> nodes = restAPI.getNodesByLabelAndProperty(label.name(), property, value);
+        return new ResourceIterableWrapper<Node,RestNode>(nodes) {
+            protected Node underlyingObjectToObject(RestNode node) {
+                return node;
+            }
+        };
+    }
+
+    @Override
+    public Schema schema() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public RestTraversalDescription traversalDescription() {
+        return RestTraversal.description();
+    }
+
+    @Override
+    public BidirectionalTraversalDescription bidirectionalTraversalDescription() {
+        throw new UnsupportedOperationException();
+    }
+
+    public Collection<String> getAllLabelNames() {
+        return restAPI.getAllLabelNames();
     }
 }
 

@@ -22,10 +22,12 @@ package org.neo4j.rest.graphdb;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.index.IndexHits;
 import org.neo4j.graphdb.traversal.TraversalDescription;
+import org.neo4j.helpers.collection.IterableWrapper;
 import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.index.lucene.ValueContext;
 import org.neo4j.rest.graphdb.batch.BatchCallback;
 import org.neo4j.rest.graphdb.batch.BatchRestAPI;
+import org.neo4j.rest.graphdb.batch.CypherResult;
 import org.neo4j.rest.graphdb.converter.RelationshipIterableConverter;
 import org.neo4j.rest.graphdb.converter.RestEntityExtractor;
 import org.neo4j.rest.graphdb.converter.RestIndexHitsConverter;
@@ -54,15 +56,19 @@ import javax.ws.rs.core.Response.Status;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URLEncoder;
 import java.util.*;
 
+import static java.util.Arrays.asList;
 import static javax.ws.rs.core.Response.Status.CREATED;
+import static org.neo4j.rest.graphdb.ExecutingRestRequest.encode;
 
 
 public class ExecutingRestAPI implements RestAPI {
 
     protected RestRequest restRequest;
-    private long propertyRefetchTimeInMillis = 1000;
+    private long propertyRefetchTimeInMillis = 10000;
     protected final RestAPI facade;
 
     protected ExecutingRestAPI(String uri, RestAPI facade) {
@@ -245,6 +251,75 @@ public class ExecutingRestAPI implements RestAPI {
         }
     }
 
+
+    @Override
+    public void removeLabel(RestNode node, String label) {
+        RequestResult response = getRestRequest().with(node.getUri()).delete("labels/" + encode(label));
+        if (response.statusOtherThan(Status.NO_CONTENT)) {
+            throw new IllegalStateException("received " + response);
+        }
+    }
+
+    @Override
+    public Collection<String> getNodeLabels(String path) {
+        RequestResult response = restRequest.get(path);
+        if (response.statusOtherThan(Status.OK)) {
+            throw new IllegalStateException("received " + response);
+        }
+        return (Collection<String>) response.toEntity();
+    }
+
+    @Override
+    public Collection<String> getAllLabelNames() {
+        RequestResult response = restRequest.get("labels");
+        if (response.statusOtherThan(Status.OK)) {
+            throw new IllegalStateException("received " + response);
+        }
+        return (Collection<String>) response.toEntity();
+    }
+
+    @Override
+    public Iterable<RestNode> getNodesByLabel(String label) {
+        RequestResult response = restRequest.get("label/" + encode(label) + "/nodes");
+        return toNodeIterableResult(response);
+    }
+    @Override
+    public Iterable<RestNode> getNodesByLabelAndProperty(String label, String property, Object value) {
+        RequestResult response = restRequest.get("label/" + encode(label) + "/nodes"+"?"+encode(property)+"="+ encode(quote(value)));
+        return toNodeIterableResult(response);
+    }
+
+    private String quote(Object value) {
+        if (value==null) return "null";
+        if (value instanceof String) return "\""+value+"\"";
+        return value.toString();
+    }
+
+    private Iterable<RestNode> toNodeIterableResult(final RequestResult response) {
+        if (response.statusOtherThan(Status.OK)) {
+            throw new IllegalStateException("received " + response);
+        }
+        final RestEntityExtractor extractor = new RestEntityExtractor(this);
+        Object col = response.toEntity();
+        if (!(col instanceof Collection)) throw new RuntimeException(String.format("Unexpected result, %s instead of collection", col!=null ? col.getClass() : null));
+        return new IterableWrapper<RestNode,Object>((Collection<Object>) col) {
+            @Override
+            protected RestNode underlyingObjectToObject(Object o) {
+                if (extractor.canHandle(o)) return (RestNode) extractor.convertFromRepresentation(o);
+                throw new IllegalStateException("Expected a node representation, got "+o);
+            }
+        };
+    }
+
+    @Override
+    public void addLabels(RestNode node, String...labels) {
+        RequestResult response = getRestRequest().with(node.getUri()).post("labels", asList(labels));
+
+        if (response.statusOtherThan(Status.NO_CONTENT)) {
+            throw new IllegalStateException("error adding labels, received " + response);
+        }
+    }
+
     private String buildPathAutoIndexerStatus(Class<? extends PropertyContainer> clazz) {
         return buildPathAutoIndexerBase(clazz).append("/status").toString();
     }
@@ -309,7 +384,7 @@ public class ExecutingRestAPI implements RestAPI {
             transaction.success();
             return batchResult;
         } finally {
-            transaction.finish();
+            transaction.close();
         }
 */
     }
@@ -345,13 +420,13 @@ public class ExecutingRestAPI implements RestAPI {
     }
     @Override
     public IndexInfo indexInfo(final String indexType) {
-        RequestResult response = restRequest.get("index/" + indexType);
+        RequestResult response = restRequest.get("index/" + encode(indexType));
         return new RetrievedIndexInfo(response);
     }
     
     @Override
     public void setPropertyOnEntity(RestEntity entity, String key, Object value) {
-        getRestRequest().with(entity.getUri()).put( "properties/" + key, value);
+        getRestRequest().with(entity.getUri()).put( "properties/" + encode(key), value);
         entity.invalidatePropertyData();
     }
     
@@ -443,7 +518,7 @@ public class ExecutingRestAPI implements RestAPI {
 
     @Override
     public void removeProperty(RestEntity entity, String key) {
-        restRequest.with(entity.getUri()).delete("properties/" + key);
+        restRequest.with(entity.getUri()).delete("properties/" + encode(key));
         entity.invalidatePropertyData();
     }
 
@@ -483,10 +558,10 @@ public class ExecutingRestAPI implements RestAPI {
         return RestInvocationHandler.getInvocationProxy(type, facade, new ServiceInvocation(facade, type, baseUri));
      }
 
-    public Map<?, ?> query(String statement, Map<String, Object> params) {
+    public CypherResult query(String statement, Map<String, Object> params) {
         params =  (params==null) ? Collections.<String,Object>emptyMap() : params;
         final RequestResult requestResult = getRestRequest().post("cypher", MapUtil.map("query", statement, "params", params));
-        return getRestRequest().toMap(requestResult);
+        return new CypherResult(requestResult);
     }
 
     @Override
@@ -506,9 +581,9 @@ public class ExecutingRestAPI implements RestAPI {
     }
 
     public QueryResult<Map<String, Object>> query(String statement, Map<String, Object> params, ResultConverter resultConverter) {
-        final Map<?, ?> resultMap = query(statement, params);
-        if (RestResultException.isExceptionResult(resultMap)) throw new RestResultException(resultMap);
-        return new RestQueryResult(resultMap, facade, resultConverter);
+        final CypherResult result = query(statement, params);
+        if (RestResultException.isExceptionResult(result.asMap())) throw new RestResultException(result.asMap());
+        return new RestQueryResult(result, facade, resultConverter);
     }
 
     public QueryResult<Object> run(String statement, Map<String, Object> params, ResultConverter resultConverter) {
