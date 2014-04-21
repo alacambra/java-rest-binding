@@ -13,8 +13,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<slf4j.version>1.6.1</slf4j.version>
-		<neo4j.version>1.9.2</neo4j.version>
-		<jersey.version>1.4</jersey.version>
+		<neo4j.version>2.0.1</neo4j.version>
+		<neo4j.version.legacy>1.9.7</neo4j.version.legacy>
+		<jersey.version>2.7</jersey.version>
 		<blueprints.version>1.2</blueprints.version>
 		<gremlin.version>1.5</gremlin.version>
 		<license-text.header>GPL-3-header.txt</license-text.header>
@@ -100,11 +101,11 @@ the relevant Commercial Agreement.
 			<version>4.11</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- <dependency> -->
-		<!-- <groupId>org.neo4j</groupId> -->
-		<!-- <artifactId>server-api</artifactId> -->
-		<!-- <version>${neo4j.version}</version> -->
-		<!-- </dependency> -->
+		<dependency>
+			<groupId>org.neo4j</groupId>
+			<artifactId>server-api</artifactId>
+			<version>${neo4j.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.neo4j</groupId>
 			<artifactId>neo4j-kernel</artifactId>
@@ -192,13 +193,13 @@ the relevant Commercial Agreement.
 		<dependency>
 			<groupId>org.neo4j.server.plugin</groupId>
 			<artifactId>neo4j-cypher-plugin</artifactId>
-			<version>${neo4j.version}</version>
+			<version>${neo4j.version.legacy}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.neo4j.server.plugin</groupId>
 			<artifactId>neo4j-gremlin-plugin</artifactId>
-			<version>${neo4j.version}</version>
+			<version>${neo4j.version.legacy}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -246,17 +247,50 @@ the relevant Commercial Agreement.
 			<artifactId>neo4j-lucene-index</artifactId>
 			<version>${neo4j.version}</version>
 		</dependency>
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.glassfish.jersey</groupId> -->
+<!-- 			<artifactId>jersey-server</artifactId> -->
+<!-- 			<version>${jersey.version}</version> -->
+<!-- 			<scope>test</scope> -->
+<!-- 		</dependency> -->
+
 		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-server</artifactId>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet</artifactId>
 			<version>${jersey.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<!-- if you are using Jersey client specific features -->
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-client</artifactId>
+			<version>${jersey.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-client</artifactId>
+			<scope>test</scope>
+			<version>${jersey.version}</version>
+		</dependency>
 
+		<!-- <dependency> -->
+		<!-- <groupId>com.sun.jersey</groupId> -->
+		<!-- <artifactId>jersey-client</artifactId> -->
+		<!-- <version>${jersey.version}</version> -->
+		<!-- <scope>test</scope> -->
+		<!-- </dependency> -->
 <!-- 		<dependency> -->
-<!-- 		<groupId>com.sun.jersey</groupId> -->
-<!-- 		<artifactId>jersey-client</artifactId> -->
-<!-- 		<version>${jersey.version}</version> -->
+<!-- 			<groupId>org.jboss.resteasy</groupId> -->
+<!-- 			<artifactId>resteasy-client</artifactId> -->
+<!-- 			<version>3.0.8.Final</version> -->
+<!-- 			<scope>test</scope> -->
+<!-- 		</dependency> -->
+<!-- 		<dependency> -->
+<!-- 			<groupId>org.jboss.resteasy</groupId> -->
+<!-- 			<artifactId>resteasy-jaxrs</artifactId> -->
+<!-- 			<version>3.0.8.Final</version> -->
+<!-- 			<scope>test</scope> -->
 <!-- 		</dependency> -->
 	</dependencies>
 	<build>

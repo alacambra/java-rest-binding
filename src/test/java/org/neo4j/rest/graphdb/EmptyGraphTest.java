@@ -20,6 +20,7 @@
 package org.neo4j.rest.graphdb;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
@@ -31,17 +32,23 @@ public class EmptyGraphTest extends RestTestBase {
         super( url );
     }
 
+    /*
+	 * @TODO hoe to test that with indexes?
+	 *  Deprecated. The reference node concept is obsolete - indexes are the canonical way of getting hold of entry points in the graph.
+	 *  @link http://api.neo4j.org/1.9.5/org/neo4j/graphdb/GraphDatabaseService.html
+	 */
+    @Ignore
     @Test(expected = NotFoundException.class)
     public void testGetReferenceNodeOnEmptyDbFails() {
-        Transaction tx = getGraphDatabase().beginTx();
-        try {
-            getGraphDatabase().getReferenceNode().delete();
-            tx.success();
-        } finally
-        {
-            tx.finish();
-        }
-        getRestGraphDb().getReferenceNode();
+//        Transaction tx = getGraphDatabase().beginTx();
+//        try {
+//            getGraphDatabase().getReferenceNode().delete();
+//            tx.success();
+//        } finally
+//        {
+//            tx.finish();
+//        }
+//        getRestGraphDb().getReferenceNode();
     }
 
     @Override

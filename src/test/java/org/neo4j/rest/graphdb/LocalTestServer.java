@@ -24,12 +24,12 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.server.CommunityNeoServer;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.database.Database;
-import org.neo4j.server.database.WrappingDatabase;
+import org.neo4j.server.database.WrappedDatabase;
 import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.modules.ThirdPartyJAXRSModule;
 import org.neo4j.server.preflight.PreFlightTasks;
-import org.neo4j.server.web.Jetty6WebServer;
+import org.neo4j.server.web.Jetty9WebServer;
 import org.neo4j.server.web.WebServer;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
@@ -51,24 +51,24 @@ import static java.util.Arrays.asList;
  * @since 24.03.11
  */
 public class LocalTestServer {
-    private CommunityNeoServer neoServer;
-    protected String propertiesFile = "test-db.properties";
-    private final ImpermanentGraphDatabase graphDatabase;
-    private String userAgent;
+	private CommunityNeoServer neoServer;
+	protected String propertiesFile = "test-db.properties";
+	private final ImpermanentGraphDatabase graphDatabase;
+	private String userAgent;
 
-    public LocalTestServer() {
-        this("localhost");
-    }
+	public LocalTestServer() {
+		this("localhost");
+	}
 
-    public LocalTestServer(String hostname) {
-        graphDatabase = new ImpermanentGraphDatabase();
-    }
+	public LocalTestServer(String hostname) {
+		graphDatabase = new ImpermanentGraphDatabase();
+	}
 
-    public void start() {
-        if (neoServer!=null) throw new IllegalStateException("Server already running");
-        URL url = getClass().getResource("/" + propertiesFile);
-        if (url==null) throw new IllegalArgumentException("Could not resolve properties file "+propertiesFile);
-        final Jetty6WebServer jettyWebServer = new Jetty6WebServer(); /* {
+	public void start() {
+		if (neoServer!=null) throw new IllegalStateException("Server already running");
+		URL url = getClass().getResource("/" + propertiesFile);
+		if (url==null) throw new IllegalArgumentException("Could not resolve properties file "+propertiesFile);
+		final Jetty9WebServer jettyWebServer = new Jetty9WebServer(); /* {
             @Override
             protected void startJetty() {
                 final Server jettyServer = getJetty();
@@ -95,127 +95,127 @@ public class LocalTestServer {
                 jettyServer.removeLifeCycleListener(listener);
             }
         }; */
-        jettyWebServer.addFilter(new Filter() {
-            public void init(FilterConfig filterConfig) throws ServletException { }
+		jettyWebServer.addFilter(new Filter() {
+			public void init(FilterConfig filterConfig) throws ServletException { }
 
-            public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
-                userAgent = ((HttpServletRequest)request).getHeader("User-Agent");
-                filterChain.doFilter(request, response);
-            }
+			public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+				userAgent = ((HttpServletRequest)request).getHeader("User-Agent");
+				filterChain.doFilter(request, response);
+			}
 
-            public void destroy() { }
-        },"/*");
-        String path = getPathFromUrl(url);
-        neoServer = new CommunityNeoServer(new PropertyFileConfigurator(new File(path))) {
+			public void destroy() { }
+		},"/*");
+		String path = getPathFromUrl(url);
+		neoServer = new CommunityNeoServer(new PropertyFileConfigurator(new File(path))) {
 
-            @Override
-            protected Database createDatabase() {
-                return new WrappingDatabase(graphDatabase);
-            }
+			@Override
+			protected Database createDatabase() {
+				return new WrappedDatabase(graphDatabase);
+			}
 
-            @Override
-            protected PreFlightTasks createPreflightTasks() {
-                return new PreFlightTasks();
-            }
+			@Override
+			protected PreFlightTasks createPreflightTasks() {
+				return new PreFlightTasks();
+			}
 
-            @Override
-            protected WebServer createWebServer() {
-                return jettyWebServer;
-            }
+			@Override
+			protected WebServer createWebServer() {
+				return jettyWebServer;
+			}
 
-            @Override
-            protected Iterable<ServerModule> createServerModules() {
-                return asList(new RESTApiModule(webServer,database,configurator.configuration()),new ThirdPartyJAXRSModule(webServer,configurator,this));
-            }
-        };
-        neoServer.start();
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
+			@Override
+			protected Iterable<ServerModule> createServerModules() {
+				return asList(new RESTApiModule(webServer,database,configurator.configuration()),new ThirdPartyJAXRSModule(webServer,configurator,this));
+			}
+		};
+		neoServer.start();
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-    private String getPathFromUrl(URL url) {
-        try {
-            return URLDecoder.decode(url.getPath(), "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException("Error decoding file path",e);
-        }
-    }
+	private String getPathFromUrl(URL url) {
+		try {
+			return URLDecoder.decode(url.getPath(), "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException("Error decoding file path",e);
+		}
+	}
 
-    public void stop() {
-        try {
-        neoServer.stop();
-        } catch(Exception e) {
-            System.err.println("Error stopping server: "+e.getMessage());
-        }
-        neoServer=null;
-    }
+	public void stop() {
+		try {
+			neoServer.stop();
+		} catch(Exception e) {
+			System.err.println("Error stopping server: "+e.getMessage());
+		}
+		neoServer=null;
+	}
 
-    public LocalTestServer withPropertiesFile(String propertiesFile) {
-        this.propertiesFile = propertiesFile;
-        return this;
-    }
-    public Database getDatabase() {
-        return neoServer.getDatabase();
-    }
+	public LocalTestServer withPropertiesFile(String propertiesFile) {
+		this.propertiesFile = propertiesFile;
+		return this;
+	}
+	public Database getDatabase() {
+		return neoServer.getDatabase();
+	}
 
-    public URI baseUri() {
-        return neoServer.baseUri();
-    }
+	public URI baseUri() {
+		return neoServer.baseUri();
+	}
 
-    public void cleanDb() {
-        Neo4jDatabaseCleaner cleaner = new Neo4jDatabaseCleaner(getGraphDatabase());
-        cleaner.cleanDb();
-    }
+	public void cleanDb() {
+		Neo4jDatabaseCleaner cleaner = new Neo4jDatabaseCleaner(getGraphDatabase());
+		cleaner.cleanDb();
+	}
 
-    public GraphDatabaseService getGraphDatabase() {
-        return getDatabase().graph;
-    }
+	public GraphDatabaseService getGraphDatabase() {
+		return getDatabase().getGraph();
+	}
 
-    public String getUserAgent() {
-        return userAgent;
-    }
+	public String getUserAgent() {
+		return userAgent;
+	}
 
-    private static class JettyStartupListener implements LifeCycle.Listener {
-        CountDownLatch latch=new CountDownLatch(1);
-        public void await() {
-            try {
-                latch.await(5, TimeUnit.SECONDS);
-            } catch(InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw new RuntimeException(ie);
-            }
-        }
+	private static class JettyStartupListener implements LifeCycle.Listener {
+		CountDownLatch latch=new CountDownLatch(1);
+		public void await() {
+			try {
+				latch.await(5, TimeUnit.SECONDS);
+			} catch(InterruptedException ie) {
+				Thread.currentThread().interrupt();
+				throw new RuntimeException(ie);
+			}
+		}
 
-        @Override
-        public void lifeCycleStarting(LifeCycle event) {
-            System.err.println("STARTING");
-        }
+		@Override
+		public void lifeCycleStarting(LifeCycle event) {
+			System.err.println("STARTING");
+		}
 
-        @Override
-        public void lifeCycleStarted(LifeCycle event) {
-            System.err.println("STARTED");
-            latch.countDown();
-        }
+		@Override
+		public void lifeCycleStarted(LifeCycle event) {
+			System.err.println("STARTED");
+			latch.countDown();
+		}
 
-        @Override
-        public void lifeCycleFailure(LifeCycle event, Throwable cause) {
-            System.err.println("FAILURE "+cause.getMessage());
-            latch.countDown();
-            throw new RuntimeException(cause);
-        }
+		@Override
+		public void lifeCycleFailure(LifeCycle event, Throwable cause) {
+			System.err.println("FAILURE "+cause.getMessage());
+			latch.countDown();
+			throw new RuntimeException(cause);
+		}
 
-        @Override
-        public void lifeCycleStopping(LifeCycle event) {
-            System.err.println("STOPPING");
-        }
+		@Override
+		public void lifeCycleStopping(LifeCycle event) {
+			System.err.println("STOPPING");
+		}
 
-        @Override
-        public void lifeCycleStopped(LifeCycle event) {
-            System.err.println("STOPPED");
-            latch.countDown();
-        }
-    }
+		@Override
+		public void lifeCycleStopped(LifeCycle event) {
+			System.err.println("STOPPED");
+			latch.countDown();
+		}
+	}
 }
